@@ -1,0 +1,423 @@
+/* KaTeX formula styling - must be imported first */
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+
+:root {
+    --apple-gray-50: #fbfbfd;
+    --apple-gray-100: #f5f5f7;
+    --apple-gray-200: #e8e8ed;
+    --apple-gray-300: #d2d2d7;
+    --apple-gray-400: #86868b;
+    --apple-gray-900: #1d1d1f;
+    --apple-accent: #0071e3;
+    --bg-primary: var(--apple-gray-50);
+    --card-bg: #ffffff;
+    --text-primary: var(--apple-gray-900);
+    --text-secondary: var(--apple-gray-400);
+    --border-color: rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+    /* Better dark mode colors with improved contrast */
+    --apple-gray-50: #0a0a0a;
+    --apple-gray-100: #1e1e1e;
+    --apple-gray-200: #2d2d2d;
+    --apple-gray-300: #3a3a3a;
+    --apple-gray-400: #a0a0a0;
+    --apple-gray-900: #f5f5f7;
+    --apple-accent: #0a84ff;
+    --bg-primary: #000000;
+    --card-bg: #1c1c1e;
+    --text-primary: #f5f5f7;
+    --text-secondary: #a0a0a0;
+    --border-color: rgba(255, 255, 255, 0.12);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.011em;
+    transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08);
+}
+
+.dark .apple-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark .apple-card:hover {
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+.apple-btn-primary {
+    background: var(--text-primary);
+    color: var(--card-bg);
+    border-radius: 980px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+}
+
+.apple-btn-secondary {
+    background: var(--apple-gray-100);
+    color: var(--text-primary);
+    border-radius: 980px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--apple-gray-300);
+    border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--apple-gray-300);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--apple-gray-400);
+}
+
+/* Frequency Particles Animation for Knowledge Graph */
+.particle-glow {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, var(--apple-accent) 0%, transparent 70%);
+    opacity: 0.03;
+    pointer-events: none;
+    animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.03;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.06;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-apple-in {
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Scale-in animation for modals */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.markdown-content {
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #000;
+    letter-spacing: -0.01em;
+}
+
+.markdown-content h1 {
+    font-size: 1.4em;
+}
+
+.markdown-content h2 {
+    font-size: 1.25em;
+}
+
+.markdown-content h3 {
+    font-size: 1.1em;
+}
+
+.markdown-content p {
+    margin-bottom: 1em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+}
+
+.markdown-content li {
+    margin-bottom: 0.4em;
+}
+
+.markdown-content ul {
+    list-style-type: disc;
+}
+
+.markdown-content ol {
+    list-style-type: decimal;
+}
+
+.markdown-content strong {
+    font-weight: 700;
+    color: #000;
+}
+
+.markdown-content blockquote {
+    border-left: 3px solid rgba(0, 0, 0, 0.1);
+    padding-left: 1em;
+    margin-left: 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-style: italic;
+}
+
+.markdown-content code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 0.9em;
+}
+
+.markdown-content .katex-display {
+    margin: 1.5em 0;
+    padding: 1em;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.markdown-content th {
+    background: rgba(0, 0, 0, 0.03);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.9em;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.markdown-content td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Dark mode specific overrides */
+.dark .markdown-content th {
+    background: var(--apple-gray-200);
+    color: var(--text-primary);
+}
+
+.dark .markdown-content code {
+    background: var(--apple-gray-200);
+    color: var(--apple-accent);
+}
+
+/* KaTeX formula styling */
+.katex {
+    font-size: 1.1em;
+}
+
+.katex-display {
+    margin: 1em 0;
+    padding: 1em;
+    background: var(--apple-gray-50);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.dark .katex-display {
+    background: var(--apple-gray-100);
+    border-color: var(--border-color);
+}
+
+/* Expand button hover effect */
+.expand-btn {
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group:hover .expand-btn {
+    opacity: 1;
+}
+
+/* Dark mode text improvements */
+.dark input,
+.dark textarea {
+    background: var(--apple-gray-100);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.dark input:focus,
+.dark textarea:focus {
+    background: var(--apple-gray-200);
+    border-color: var(--apple-accent);
+}
+
+/* Better dark mode for specific components */
+.dark .bg-black\/\[0\.03\] {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .bg-black\/\[0\.01\] {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.dark .text-black\/30 {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dark .text-black\/40 {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.dark .text-black\/60 {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.dark .text-black\/80 {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .border-black\/\[0\.02\] {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .border-black\/\[0\.03\] {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .border-black\/\[0\.04\] {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark .border-black\/\[0\.05\] {
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.dark .border-black\/5 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .border-black\/10 {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Improve hover states in dark mode */
+.dark .hover\:bg-black\/\[0\.02\]:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .hover\:bg-black\/5:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .hover\:bg-black\/10:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Better readability for transcript in dark mode */
+.dark .bg-\[#fbfbfd\] {
+    background-color: var(--apple-gray-100) !important;
+}
+
+.dark .bg-\[#f5f5f7\] {
+    background-color: var(--apple-gray-100) !important;
+}
+
+/* Improve gradient backgrounds in dark mode */
+.dark .from-indigo-50\/30 {
+    --tw-gradient-from: rgba(99, 102, 241, 0.1) !important;
+}
+
+.dark .via-purple-50\/20 {
+    --tw-gradient-via: rgba(168, 85, 247, 0.08) !important;
+}
+
+.dark .to-pink-50\/30 {
+    --tw-gradient-to: rgba(236, 72, 153, 0.1) !important;
+}
+
+/* Better shadows in dark mode */
+.dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+}
+
+.dark .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+}
+
+.dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+}
+
+.dark .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+}
+
+.dark .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
