@@ -24,11 +24,6 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
     initDB();
-
-    // Check initial prefers-color-scheme
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
-    }
   }, []);
 
   useEffect(() => {
