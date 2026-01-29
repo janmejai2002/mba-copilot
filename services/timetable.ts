@@ -47,6 +47,18 @@ const parseFullCSV = (data: string) => {
     return rows.map(row => row.map(cell => cell.replace(/^["']+|["']+$/g, '').trim()));
 };
 
+// Course code to full name mapping
+const COURSE_LOOKUP: Record<string, { name: string; code: string }> = {
+    'FM2': { name: 'Financial Management - II', code: 'FM2' },
+    'ORM2': { name: 'Operations Management - II', code: 'ORM2' },
+    'BOB2': { name: 'Org. Structure, Design and Change', code: 'BOB2' },
+    'STM': { name: 'Strategic Management', code: 'STM' },
+    'BLA': { name: 'Business Law', code: 'BLA' },
+    'HRM': { name: 'Human Resource Management', code: 'HRM' },
+    'OPR': { name: 'Operations Research', code: 'OPR' },
+    'BRM': { name: 'Business Research Methods', code: 'BRM' }
+};
+
 export async function syncTimetable() {
     try {
         const response = await fetch(SHEET_URL);
@@ -107,7 +119,14 @@ export async function syncTimetable() {
                     const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectCode);
                     const isJunk = /^(Act|Activity|Holiday|No Class|TBD|Vacation)$/i.test(subjectCode);
 
-                    if (isDatePattern || isJunk || subjectCode.length < 2) return;
+                    // Filter short codes like OPR, HRM, BRM, BOB2, etc.
+                    const isShortCode = /^[A-Z]{2,5}[0-9]{0,2}$/.test(subjectCode);
+
+                    // Filter if too short or only numbers
+                    const isTooShort = subjectCode.length < 3;
+                    const isOnlyNumbers = /^[0-9]+$/.test(subjectCode);
+
+                    if (isDatePattern || isJunk || isShortCode || isTooShort || isOnlyNumbers) return;
 
                     // Extract Session/Section
                     const sessionMatch = content.match(/\[(\d+)\]/);
@@ -115,10 +134,9 @@ export async function syncTimetable() {
                     const sessionNum = sessionMatch ? sessionMatch[1] : "?";
                     const sectionLetter = sectionMatch ? sectionMatch[1].toUpperCase() : "?";
 
-                    const lookup = courseLookup[subjectCode];
+                    const lookup = COURSE_LOOKUP[subjectCode];
                     const subjectName = lookup ? lookup.name : subjectCode;
-                    let faculty = lookup ? lookup.faculty : (parts[1] || "").replace(/[\[\]"']/g, '').trim();
-                    if (!faculty || faculty === "Unknown") faculty = (parts[1] || "").replace(/[\[\]"']/g, '').trim() || "Unknown";
+                    let faculty = (parts[1] || "").replace(/[\[\]"']/g, '').trim() || "Unknown";
 
                     // Second filter pass on the resolved name
                     const isNameDatePattern = /^\d{4}|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectName);

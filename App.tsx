@@ -54,20 +54,15 @@ const App: React.FC = () => {
     // Sync with Drive
     await storage.pullFromDrive();
 
+    // Initialize default subjects if none exist
+    if (user) {
+      await storage.initializeDefaultSubjects(user.id);
+    }
+
     const savedSubjects = await storage.getAllSubjects();
     const savedSessions = await storage.getAllSessions();
     setSubjects(savedSubjects);
     setSessions(savedSessions);
-
-    // Trigger Timetable Sync in background
-    if (user) {
-      import('./services/timetable').then(({ applyTimetableSync }) => {
-        applyTimetableSync(user.id).then(() => {
-          storage.getAllSubjects().then(setSubjects);
-          storage.getAllSessions().then(setSessions);
-        });
-      });
-    }
 
     setIsLoading(false);
   }

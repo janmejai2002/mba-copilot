@@ -97,5 +97,81 @@ export const storage = {
     async deleteSession(id: string) {
         await db.sessions.delete(id);
         syncToDrive();
+    },
+
+    async initializeDefaultSubjects(userId: string) {
+        const existingSubjects = await db.subjects.toArray();
+        if (existingSubjects.length > 0) return; // Already initialized
+
+        const defaultSubjects: Subject[] = [
+            {
+                id: crypto.randomUUID(),
+                name: 'Financial Management - II',
+                code: 'FM2',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Operations Management - II',
+                code: 'ORM2',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Org. Structure, Design and Change',
+                code: 'BOB2',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Strategic Management',
+                code: 'STM',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Business Law',
+                code: 'BLA',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Human Resource Management',
+                code: 'HRM',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Operations Research',
+                code: 'OPR',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            },
+            {
+                id: crypto.randomUUID(),
+                name: 'Business Research Methods',
+                code: 'BRM',
+                faculty: 'Unknown',
+                createdAt: Date.now(),
+                userId
+            }
+        ];
+
+        await db.subjects.bulkAdd(defaultSubjects);
+        syncToDrive();
+        console.log('✅ Initialized default MBA subjects');
     }
 };

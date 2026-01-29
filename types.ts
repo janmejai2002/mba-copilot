@@ -3,7 +3,9 @@ export interface Subject {
   id: string;
   userId?: string;
   name: string;
-  description: string;
+  code?: string; // Short code like FM2, OPR, etc.
+  faculty?: string; // Professor name
+  description?: string;
   createdAt: number;
 }
 
