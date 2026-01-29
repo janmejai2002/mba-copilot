@@ -450,22 +450,33 @@ const SessionView: React.FC<SessionViewProps> = ({
           ))}
           <div ref={transcriptEndRef} />
         </div>
-        <div className="p-4 border-t border-black/5 flex justify-between items-center bg-white/80 gap-3">
-          <AudioVisualizer analyser={analyser} />
+        <div className="px-4 py-2 border-t border-black/5 flex justify-between items-center bg-white/80 gap-3">
+          {/* Minimal Recording Indicator */}
+          {isRecording && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-black/40">Live</span>
+            </div>
+          )}
+          {!isRecording && <div className="text-[9px] font-black uppercase tracking-widest text-black/20">Ready</div>}
+
           <div className="flex items-center gap-2">
             {isRecording && (
               <button
                 onClick={() => setIsPaused(!isPaused)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isPaused ? 'bg-orange-500' : 'bg-black/5'}`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isPaused ? 'bg-orange-500' : 'bg-black/5'}`}
                 title={isPaused ? "Resume" : "Pause"}
               >
-                <div className={`flex gap-1 ${isPaused ? 'text-white' : 'text-black'}`}>
-                  {isPaused ? <Play className="w-4 h-4" /> : <div className="flex gap-0.5"><div className="w-1 h-3 bg-current" /><div className="w-1 h-3 bg-current" /></div>}
+                <div className={`flex gap-0.5 ${isPaused ? 'text-white' : 'text-black'}`}>
+                  {isPaused ? <Play className="w-3 h-3" /> : <><div className="w-0.5 h-2.5 bg-current" /><div className="w-0.5 h-2.5 bg-current" /></>}
                 </div>
               </button>
             )}
-            <button onClick={isRecording ? stopRecording : startRecording} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-red-500' : 'bg-black'}`}>
-              {isRecording ? <div className="w-3 h-3 bg-white rounded-sm" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-black hover:bg-black/80'}`}
+            >
+              {isRecording ? <div className="w-2.5 h-2.5 bg-white rounded-sm" /> : <Play className="w-3.5 h-3.5 text-white ml-0.5" />}
             </button>
           </div>
         </div>
@@ -505,7 +516,7 @@ const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 px-6 relative z-10">
+      <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 px-4 sm:px-6 relative z-10">
 
         {/* LEFT ORBIT: HUD MODULES */}
         <aside className="lg:col-span-3 space-y-8 order-2 lg:order-1">
@@ -590,6 +601,28 @@ const SessionView: React.FC<SessionViewProps> = ({
                   className={`w-12 h-12 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${skipSilence ? 'bg-[var(--vidyos-teal)] text-white' : 'hover:bg-black/5 text-black/40'}`}
                 >
                   SIL
+                </button>
+
+                {/* Clean Transcript Export */}
+                <button
+                  onClick={() => {
+                    const cleanText = transcription
+                      .filter(t => t.role !== 'system')
+                      .map(t => `[${new Date(t.timestamp).toLocaleTimeString()}] ${t.text}`)
+                      .join('\n\n');
+                    const blob = new Blob([cleanText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${subject.name}_${session.title}_transcript.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-4 py-2.5 bg-black/5 hover:bg-black/10 rounded-full flex items-center gap-2 transition-all"
+                  title="Export Clean Transcript"
+                >
+                  <FileText className="w-3.5 h-3.5 text-black/60" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-black/60">Clean Transcript</span>
                 </button>
 
                 <div className="flex items-center gap-2">

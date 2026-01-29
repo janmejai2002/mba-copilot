@@ -527,16 +527,34 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                         <option value="example">Examples</option>
                         <option value="trend">Trends</option>
                     </select>
-                    <button
-                        onClick={toggleLearningPath}
-                        className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showLearningPath
-                            ? 'bg-purple-600 text-white shadow-lg'
-                            : 'bg-black/[0.02] text-black/60 hover:bg-black/[0.04]'
-                            }`}
+                    <div
+                        className="relative group"
+                        onMouseEnter={() => setShowLearningPath(true)}
+                        onMouseLeave={() => setShowLearningPath(false)}
                     >
-                        <Route className="w-3 h-3" />
-                        Learning Path
-                    </button>
+                        <button
+                            className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04]"
+                        >
+                            <Route className="w-3 h-3" />
+                            Learning Path
+                        </button>
+                        {showLearningPath && highlightedPath.length > 0 && (
+                            <div className="absolute top-full mt-2 left-0 bg-white border border-black/10 rounded-xl shadow-2xl p-4 z-50 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-black/40 mb-2">Recommended Study Order</p>
+                                <div className="space-y-1">
+                                    {highlightedPath.map((nodeId, idx) => {
+                                        const node = nodes.find(n => n.id === nodeId);
+                                        return node ? (
+                                            <div key={idx} className="text-[10px] font-medium text-black/70 flex items-center gap-2">
+                                                <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[8px] font-black">{idx + 1}</span>
+                                                {node.label}
+                                            </div>
+                                        ) : null;
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <button
                         onClick={exportStudyGuide}
                         className="px-4 py-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2"
