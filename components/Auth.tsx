@@ -50,8 +50,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-bold text-center mb-2">MBA Copilot</h1>
-                <p className="text-center text-black/50 mb-10 font-medium">Your academic second brain.</p>
+                <h1 className="text-3xl font-bold text-center mb-2">Vidyos</h1>
+                <p className="text-center text-black/50 mb-10 font-medium">Knowledge, reimagined.</p>
 
                 <div className="space-y-6">
                     <p className="text-center text-sm text-black/40 px-4">

@@ -10,7 +10,7 @@ const PrivacyPolicy: React.FC = () => {
             <section className="space-y-6">
                 <h2 className="text-2xl font-bold">1. Data Storage</h2>
                 <p>
-                    MBA Copilot is designed with a privacy-first approach. We do not store your recordings,
+                    Vidyos is designed with a privacy-first approach. We do not store your recordings,
                     transcripts, or personal data on our servers. All application data is stored in your personal
                     Google Drive account within a specialized "App Data Folder".
                 </p>

@@ -20,9 +20,9 @@ const Layout: React.FC<LayoutProps> = ({ children, darkMode, onToggleDarkMode, u
         {/* ... existing header ... */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[var(--text-primary)] rounded-xl flex items-center justify-center transition-colors">
-            <span className="text-[var(--card-bg)] font-bold text-[10px]">MBA</span>
+            <span className="text-[var(--card-bg)] font-bold text-lg">V</span>
           </div>
-          <h1 className="text-sm font-bold tracking-tight uppercase">MBA Copilot</h1>
+          <h1 className="text-sm font-bold tracking-tight uppercase">Vidyos</h1>
         </div>
 
         <div className="flex items-center gap-4 md:gap-8">
@@ -88,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkMode, onToggleDarkMode, u
             </button>
           </div>
           <p className="text-[10px] font-medium text-black/20 uppercase tracking-[0.2em]">
-            &copy; 2026 MBA Copilot &bull; Privacy-First Academic Assistant
+            &copy; 2026 Vidyos &bull; Knowledge, Reimagined
           </p>
         </div>
       </footer>

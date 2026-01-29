@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body: JSON.stringify({
                 model: 'sonar',
                 messages: [
-                    { role: 'system', content: 'You are an MBA teaching assistant. Analyze transcripts and explain technical business concepts clearly and concisely.' },
+                    { role: 'system', content: 'You are an academic teaching assistant. Analyze transcripts and explain technical concepts clearly and concisely.' },
                     { role: 'user', content: prompt }
                 ]
             })

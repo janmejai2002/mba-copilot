@@ -23,7 +23,7 @@ const callGeminiProxy = async (model: string, contents: string, config?: any) =>
 export const generateSessionInsight = async (transcript: string) => {
   const response = await callGeminiProxy(
     'gemini-1.5-flash-preview-0514',
-    `Please summarize the following classroom lecture transcript and generate 3 potential exam questions based on it. Use a professional MBA tone.
+    `Please summarize the following classroom lecture transcript and generate 3 potential exam questions based on it. Use a professional academic tone.
     
     Transcript:
     ${transcript}`,
@@ -38,7 +38,7 @@ export const generateSessionInsight = async (transcript: string) => {
 export const extractConceptsFromMaterials = async (fileNames: string[]) => {
   const response = await callGeminiProxy(
     'gemini-2.0-flash',
-    `Based on these file names uploaded as study material for an MBA class, predict 5 core concepts or technical terms that are likely contained in them. Provide a brief 1-sentence explanation for each.
+    `Based on these file names uploaded as study material for this class, predict 5 core concepts or technical terms that are likely contained in them. Provide a brief 1-sentence explanation for each.
     
     Files: ${fileNames.join(', ')}`,
     {

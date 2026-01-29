@@ -10,7 +10,7 @@ const TermsOfService: React.FC = () => {
             <section className="space-y-6">
                 <h2 className="text-2xl font-bold">1. Agreement to Terms</h2>
                 <p>
-                    By using MBA Copilot, you agree to these terms. This is a tool designed to assist
+                    By using Vidyos, you agree to these terms. This is a tool designed to assist
                     students in recording and analyzing their academic lectures.
                 </p>
 
@@ -29,7 +29,7 @@ const TermsOfService: React.FC = () => {
 
                 <h2 className="text-2xl font-bold">4. Limitation of Liability</h2>
                 <p>
-                    MBA Copilot is provided "as is". We are not responsible for data loss,
+                    Vidyos is provided "as is". We are not responsible for data loss,
                     transcription errors, or any academic consequences resulting from the use of
                     this tool.
                 </p>

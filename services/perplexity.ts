@@ -26,7 +26,7 @@ export const callPerplexity = async (prompt: string) => {
 };
 
 export const extractKeywords = async (transcript: string) => {
-    const prompt = `From the following MBA lecture transcript, identify the 2 most important technical business keywords or concepts that were mentioned. 
+    const prompt = `From the following lecture transcript, identify the 2 most important technical keywords or concepts that were mentioned. 
   Provide the result as a raw JSON array of strings only.
   
   Transcript: ${transcript}`;
@@ -43,14 +43,14 @@ export const extractKeywords = async (transcript: string) => {
 };
 
 export const explainConcept = async (keyword: string, context: string) => {
-    const prompt = `Explain the business concept "${keyword}" in the context of this lecture: "${context}". 
-  Provide a concise 2-sentence explanation suitable for an MBA student.`;
+    const prompt = `Explain the concept "${keyword}" in the context of this lecture: "${context}". 
+  Provide a concise 2-sentence explanation suitable for an academic level.`;
 
     return await callPerplexity(prompt);
 };
 
 export const generateSuggestedQuestions = async (transcript: string) => {
-    const prompt = `Based on the following MBA lecture transcript, generate 3 short, thought-provoking questions a student could ask to deepen their understanding.
+    const prompt = `Based on the following lecture transcript, generate 3 short, thought-provoking questions a student could ask to deepen their understanding.
   Provide the result as a raw JSON array of strings only.
   
   Transcript: ${transcript}`;

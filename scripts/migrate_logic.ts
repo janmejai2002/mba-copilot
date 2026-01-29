@@ -1,10 +1,10 @@
 
-import { storage, MBADatabase } from '../services/db';
+import { storage, VidyosDatabase } from '../services/db';
 import { Session, TranscriptionTurn } from '../types';
 
 async function migrateSessions() {
     console.log('Starting session migration...');
-    const db = new MBADatabase();
+    const db = new VidyosDatabase();
     await db.open();
 
     const allSessions = await db.sessions.toArray();

@@ -16,7 +16,7 @@ import TimetableValidator from './components/TimetableValidator';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<GoogleUser | null>(() => {
-    const saved = localStorage.getItem('mba_user');
+    const saved = localStorage.getItem('vidyos_user');
     return saved ? JSON.parse(saved) : null;
   });
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -69,12 +69,12 @@ const App: React.FC = () => {
 
   const handleAuthComplete = (googleUser: GoogleUser) => {
     setUser(googleUser);
-    localStorage.setItem('mba_user', JSON.stringify(googleUser));
+    localStorage.setItem('vidyos_user', JSON.stringify(googleUser));
   };
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('mba_user');
+    localStorage.removeItem('vidyos_user');
     setSubjects([]);
     setSessions([]);
     setShowAuth(false);

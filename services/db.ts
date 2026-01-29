@@ -3,14 +3,14 @@ import Dexie, { Table } from 'dexie';
 import { Subject, Session } from '../types';
 import { googleDrive } from './googleDrive';
 
-export class MBADatabase extends Dexie {
+export class VidyosDatabase extends Dexie {
     subjects!: Table<Subject>;
     sessions!: Table<Session>;
     groundingMaterials!: Table<any>;
 
     constructor() {
-        super('MBACopilotDB');
-        this.version(3).stores({
+        super('VidyosDB');
+        this.version(1).stores({
             subjects: 'id, name, createdAt, userId',
             sessions: 'id, subjectId, date, title, userId',
             groundingMaterials: 'id, sessionId, name'
@@ -18,7 +18,7 @@ export class MBADatabase extends Dexie {
     }
 }
 
-export const db = new MBADatabase();
+export const db = new VidyosDatabase();
 
 // Google Drive Sync Logic
 let gapiAccessToken: string | null = null;
@@ -45,7 +45,7 @@ const syncToDrive = async () => {
             const sessions = await db.sessions.toArray();
             const backupData = { subjects, sessions, lastSync: Date.now() };
 
-            const result = await googleDrive.saveToAppData(gapiAccessToken, 'mba_copilot_backup.json', backupData, gdriveFileId || undefined);
+            const result = await googleDrive.saveToAppData(gapiAccessToken, 'vidyos_backup.json', backupData, gdriveFileId || undefined);
             if (result && result.id) gdriveFileId = result.id;
             console.log("✅ Drive Sync Complete");
         } catch (e) {
@@ -57,7 +57,7 @@ const syncToDrive = async () => {
 export const storage = {
     async pullFromDrive() {
         if (!gapiAccessToken) return;
-        const data = await googleDrive.getAppDataFile(gapiAccessToken, 'mba_copilot_backup.json');
+        const data = await googleDrive.getAppDataFile(gapiAccessToken, 'vidyos_backup.json');
         if (data && data.content) {
             gdriveFileId = data.id;
             const { subjects, sessions } = data.content;
@@ -172,6 +172,6 @@ export const storage = {
 
         await db.subjects.bulkAdd(defaultSubjects);
         syncToDrive();
-        console.log('✅ Initialized default MBA subjects');
+        console.log('✅ Initialized default study subjects');
     }
 };

@@ -304,7 +304,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <header className="fixed top-0 w-full h-[72px] flex items-center justify-between px-10 z-[100] border-b border-white/5 backdrop-blur-3xl bg-black/60">
                 <div className="flex items-center gap-3">
                     <div className="w-5 h-5 bg-white rounded-sm" />
-                    <span className="font-extrabold tracking-tighter text-lg uppercase italic">MBA COPILOT</span>
+                    <span className="font-extrabold tracking-tighter text-lg uppercase italic">VIDYOS</span>
                 </div>
                 <nav className="hidden lg:flex items-center gap-10">
                     <a href="#lectures" className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Features</a>
@@ -329,7 +329,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     <span className="mono-tag reveal">The New Standard of Academic Leverage</span>
                     <h1 className="reveal">
                         Cognitive Leverage<br />
-                        <span className="text-white/30 italic">for MBA Leaders.</span>
+                        <span className="text-white/30 italic">for Modern Learners.</span>
                     </h1>
                     <p className="max-w-xl mx-auto text-xl md:text-2xl text-white/50 mb-12 leading-relaxed reveal">
                         The high-performance companion that transcribes, indexes, and reasons through your entire curriculum in real-time.
@@ -411,7 +411,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <footer className="px-10 py-20 border-t border-white/5 bg-[#050505] flex flex-col md:flex-row justify-between items-center gap-10">
                 <div className="flex items-center gap-3 opacity-40">
                     <div className="w-4 h-4 bg-white rounded-sm" />
-                    <span className="font-bold tracking-tighter text-sm uppercase">MBA COPILOT — 2026</span>
+                    <span className="font-bold tracking-tighter text-sm uppercase">VIDYOS — 2026</span>
                 </div>
                 <div className="flex gap-8">
                     <a href="/#privacy" className="text-[10px] font-mono tracking-widest text-white/30 hover:text-white transition-colors">PRIVACY_POLICY</a>
