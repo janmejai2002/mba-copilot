@@ -6,6 +6,8 @@ import SessionView from './components/SessionView';
 import SubjectHome from './components/SubjectHome';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { storage, setDriveToken } from './services/db';
 import { GoogleUser } from './services/googleDrive';
 
@@ -22,6 +24,13 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [isMiniMode, setIsMiniMode] = useState(false);
+  const [hash, setHash] = useState(window.location.hash);
+
+  useEffect(() => {
+    const handleHashChange = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -132,6 +141,14 @@ const App: React.FC = () => {
 
   if (!user) {
     return <Auth onAuthComplete={handleAuthComplete} />;
+  }
+
+  if (hash === '#privacy') {
+    return <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}><PrivacyPolicy /></Layout>;
+  }
+
+  if (hash === '#terms') {
+    return <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}><TermsOfService /></Layout>;
   }
 
   return (
