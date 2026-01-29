@@ -4,52 +4,127 @@ import { storage } from './db';
 
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Q11tXArxJqN9aUMRSSwpbKJss6xzy0OAwVwmUzgHaTw/export?format=csv&gid=0';
 
+/**
+ * Robust CSV parser that handles newlines inside quotes.
+ */
+const parseFullCSV = (data: string) => {
+    const rows: string[][] = [];
+    let currentColumn = '';
+    let currentRow: string[] = [];
+    let inQuotes = false;
+
+    for (let i = 0; i < data.length; i++) {
+        const char = data[i];
+        const nextChar = data[i + 1];
+
+        if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+                currentColumn += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            currentRow.push(currentColumn.trim());
+            currentColumn = '';
+        } else if ((char === '\r' || char === '\n') && !inQuotes) {
+            if (currentRow.length > 0 || currentColumn !== '') {
+                currentRow.push(currentColumn.trim());
+                rows.push(currentRow);
+            }
+            currentColumn = '';
+            currentRow = [];
+            if (char === '\r' && nextChar === '\n') i++;
+        } else {
+            currentColumn += char;
+        }
+    }
+    if (currentColumn !== '' || currentRow.length > 0) {
+        currentRow.push(currentColumn.trim());
+        rows.push(currentRow);
+    }
+    return rows;
+};
+
 export async function syncTimetable() {
     try {
         const response = await fetch(SHEET_URL);
         const csvText = await response.text();
-        const rows = csvText.split('\n').map(row => row.split(','));
+        const allRows = parseFullCSV(csvText);
 
-        // Basic parsing logic based on the provided sheet structure
-        // Assuming Column A is Date, and Columns B, C, D, E are slots
-        // This is a simplified parser - might need refinement based on exact CSV output
+        const header = allRows[0] || [];
 
-        const sessionsToCreate: Partial<Session>[] = [];
-        const subjectsFound = new Set<string>();
+        // 1. Build Course Look-up Table (Scanning all columns H-K)
+        const courseLookup: Record<string, { name: string; faculty: string }> = {};
+        allRows.forEach(row => {
+            const code = row[7]?.trim(); // Column H
+            const name = row[8]?.trim(); // Column I
+            const facultyArr = row[10]?.trim(); // Column K
 
-        let currentDay = '';
+            if (code && name && code !== "Course Code") {
+                courseLookup[code] = { name, faculty: facultyArr || "Unknown" };
+            }
+        });
 
-        for (let i = 2; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length < 2) continue;
+        const slotTimes = [
+            header[1] || '09:00 AM - 10:30 AM',
+            header[2] || '11:00 AM - 12:30 PM',
+            header[3] || '14:00 PM - 15:30 PM',
+            header[4] || '16:00 PM - 17:30 PM'
+        ];
 
-            const dateStr = row[0]?.trim();
-            if (dateStr) currentDay = dateStr;
+        const sessionsToCreate: any[] = [];
+        const subjectsFound = new Map<string, string>(); // Name -> Faculty
 
-            // Slots B, C, D, E
-            const slots = [
-                { time: '09:00', content: row[1] },
-                { time: '11:00', content: row[2] },
-                { time: '14:00', content: row[3] },
-                { time: '16:00', content: row[4] }
-            ];
+        let currentActiveDate = "";
+        const dateAnchorRegex = /^[A-Z][a-z]{2}\s\d{1,2}.*?\d{4}/;
 
-            slots.forEach(slot => {
-                if (slot.content && slot.content.trim().length > 3) {
-                    const subjectName = slot.content.split('[')[0].trim();
-                    if (subjectName) {
-                        subjectsFound.add(subjectName);
+        // Extraction protocol from Row 10 (index 9)
+        for (let i = 9; i < allRows.length; i++) {
+            const row = allRows[i];
+            if (!row) continue;
 
-                        // Parse date
-                        // row[0] might be "Jan 13, 2026 Tuesday"
-                        // We'll try to create a valid timestamp
-                        const cleanedDate = currentDay.split(' ').slice(0, 3).join(' '); // "Jan 13, 2026"
-                        const sessionDate = new Date(`${cleanedDate} ${slot.time}`).getTime();
+            const rawDateCell = row[0] || "";
+            if (dateAnchorRegex.test(rawDateCell)) {
+                currentActiveDate = rawDateCell;
+            }
+
+            if (!currentActiveDate) continue;
+
+            // Only consider columns B, C, D, E (index 1-4)
+            [1, 2, 3, 4].forEach((colIdx, slotIdx) => {
+                const content = row[colIdx];
+                if (content && content.includes('[') && content.length > 3) {
+                    const parts = content.split('\n').map(p => p.trim());
+                    const subjectPart = parts[0] || "";
+                    const subjectCode = subjectPart.split('[')[0]?.trim() || "Unknown";
+
+                    // Extract Session/Section
+                    const sessionMatch = content.match(/\[(\d+)\]/);
+                    const sectionMatch = content.match(/\[([EFG])\]/i);
+                    const sessionNum = sessionMatch ? sessionMatch[1] : "?";
+                    const sectionLetter = sectionMatch ? sectionMatch[1].toUpperCase() : "?";
+
+                    const lookup = courseLookup[subjectCode];
+                    const subjectName = lookup ? lookup.name : subjectCode;
+                    let faculty = lookup ? lookup.faculty : parts[1]?.replace(/[\[\]]/g, '');
+                    if (!faculty || faculty === "Unknown") faculty = parts[1]?.replace(/[\[\]]/g, '') || "Unknown";
+
+                    subjectsFound.set(subjectName, faculty);
+
+                    // Parse Date for timestamp
+                    // Format: "Jan 13, 2026 Tuesday" -> "Jan 13, 2026"
+                    const dateMatch = currentActiveDate.match(/^[A-Z][a-z]{2}\s\d{1,2},?\s\d{4}/);
+                    if (dateMatch) {
+                        const cleanedDate = dateMatch[0];
+                        const startTime = slotTimes[slotIdx].split('-')[0].trim();
+                        const sessionDate = new Date(`${cleanedDate} ${startTime}`).getTime();
 
                         if (!isNaN(sessionDate)) {
                             sessionsToCreate.push({
-                                title: `Lecture: ${subjectName}`,
-                                subjectId: subjectName, // Use name as temp ID or match existing
+                                title: `${subjectName} (Session ${sessionNum}) [Sec ${sectionLetter}]`,
+                                subjectId: subjectName,
+                                faculty,
                                 date: sessionDate
                             });
                         }
@@ -58,8 +133,10 @@ export async function syncTimetable() {
             });
         }
 
-        console.log(`Parsed ${sessionsToCreate.length} sessions from timetable.`);
-        return { subjectsFound: Array.from(subjectsFound), sessionsToCreate };
+        return {
+            subjectsFound: Array.from(subjectsFound.entries()).map(([name, faculty]) => ({ name, faculty })),
+            sessionsToCreate
+        };
 
     } catch (error) {
         console.error('Failed to sync timetable:', error);
@@ -75,13 +152,13 @@ export async function applyTimetableSync(userId: string) {
     const existingSessions = await storage.getAllSessions();
 
     // 1. Ensure Subjects exist
-    for (const name of data.subjectsFound) {
-        if (!existingSubjects.find(s => s.name === name)) {
+    for (const sub of data.subjectsFound) {
+        if (!existingSubjects.find(s => s.name === sub.name)) {
             await storage.saveSubject({
                 id: Math.random().toString(36).substr(2, 9),
                 userId,
-                name,
-                description: 'Imported from ERP Timetable',
+                name: sub.name,
+                description: `Faculty: ${sub.faculty}`,
                 createdAt: Date.now()
             });
         }
@@ -90,17 +167,17 @@ export async function applyTimetableSync(userId: string) {
     // Refresh subjects to get IDs
     const currentSubjects = await storage.getAllSubjects();
 
-    // 2. Create Sessions for the next 7 days if they don't exist
+    // 2. Create Sessions for the next 14 days if they don't exist
     const now = Date.now();
-    const futureLimit = now + (7 * 24 * 60 * 60 * 1000);
+    const futureLimit = now + (14 * 24 * 60 * 60 * 1000);
 
     for (const sessionData of data.sessionsToCreate) {
-        if (sessionData.date! > now && sessionData.date! < futureLimit) {
+        if (sessionData.date > now && sessionData.date < futureLimit) {
             const subject = currentSubjects.find(s => s.name === sessionData.subjectId);
             if (subject) {
                 const exists = existingSessions.find(s =>
                     s.subjectId === subject.id &&
-                    Math.abs(s.date - sessionData.date!) < 3600000 // Within 1 hour
+                    Math.abs(s.date - sessionData.date) < 3600000 // Within 1 hour
                 );
 
                 if (!exists) {
@@ -108,10 +185,12 @@ export async function applyTimetableSync(userId: string) {
                         id: Math.random().toString(36).substr(2, 9),
                         userId,
                         subjectId: subject.id,
-                        title: sessionData.title!,
-                        date: sessionData.date!,
+                        title: sessionData.title,
+                        date: sessionData.date,
                         transcript: '',
-                        turns: []
+                        turns: [],
+                        groundingFiles: [],
+                        groundingFileDetails: []
                     });
                 }
             }

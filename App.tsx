@@ -11,6 +11,8 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import { storage, setDriveToken } from './services/db';
 import { GoogleUser } from './services/googleDrive';
+import TimetableTest from './components/TimetableTest';
+import TimetableValidator from './components/TimetableValidator';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<GoogleUser | null>(() => {
@@ -144,6 +146,14 @@ const App: React.FC = () => {
 
   if (hash === '#terms') {
     return <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}><TermsOfService /></Layout>;
+  }
+
+  if (hash === '#parser') {
+    return <TimetableTest />;
+  }
+
+  if (hash === '#validator') {
+    return <TimetableValidator />;
   }
 
   if (isLoading) {
