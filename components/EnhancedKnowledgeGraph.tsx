@@ -61,7 +61,7 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<string>('all');
     const [showLearningPath, setShowLearningPath] = useState(false);
@@ -163,12 +163,22 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
     };
 
     useEffect(() => {
-        if (!svgRef.current || !containerRef.current || filteredNodes.length === 0) return;
+        if (!containerRef.current) return;
 
-        const container = containerRef.current;
-        const width = container.clientWidth;
-        const height = Math.max(600, container.clientHeight);
-        setDimensions({ width, height });
+        const observer = new ResizeObserver((entries) => {
+            if (!entries.length) return;
+            const { width, height } = entries[0].contentRect;
+            setDimensions({ width, height });
+        });
+
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!svgRef.current || dimensions.width === 0 || filteredNodes.length === 0) return;
+
+        const { width, height } = dimensions;
 
         // Clear previous graph
         d3.select(svgRef.current).selectAll('*').remove();
@@ -369,12 +379,37 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
 
     const handleZoomOut = () => {
         const svg = d3.select(svgRef.current);
-        svg.transition().call(d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 0.7);
+        svg.transition().duration(500).call(d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 0.7);
+    };
+
+    const handleAutoFit = () => {
+        if (!svgRef.current || filteredNodes.length === 0) return;
+        const { width, height } = dimensions;
+        const svg = d3.select(svgRef.current);
+
+        const nodesX = filteredNodes.map(n => n.x!);
+        const nodesY = filteredNodes.map(n => n.y!);
+
+        const minX = Math.min(...nodesX) - 50;
+        const maxX = Math.max(...nodesX) + 50;
+        const minY = Math.min(...nodesY) - 50;
+        const maxY = Math.max(...nodesY) + 50;
+
+        const graphWidth = maxX - minX;
+        const graphHeight = maxY - minY;
+
+        const scale = Math.min(width / graphWidth, height / graphHeight, 2);
+        const translateX = width / 2 - (minX + graphWidth / 2) * scale;
+        const translateY = height / 2 - (minY + graphHeight / 2) * scale;
+
+        svg.transition()
+            .duration(750)
+            .call(d3.zoom<SVGSVGElement, unknown>().transform as any, d3.zoomIdentity.translate(translateX, translateY).scale(scale));
     };
 
     const handleReset = () => {
         const svg = d3.select(svgRef.current);
-        svg.transition().call(d3.zoom<SVGSVGElement, unknown>().transform as any, d3.zoomIdentity);
+        svg.transition().duration(500).call(d3.zoom<SVGSVGElement, unknown>().transform as any, d3.zoomIdentity);
     };
 
     const exportStudyGuide = () => {
@@ -444,6 +479,13 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                             title="Zoom out"
                         >
                             <ZoomOut className="w-3 h-3 text-black/30" />
+                        </button>
+                        <button
+                            onClick={handleAutoFit}
+                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
+                            title="Fit neural map"
+                        >
+                            <Route className="w-3.5 h-3.5 text-purple-500" />
                         </button>
                         <button
                             onClick={handleReset}

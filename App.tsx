@@ -14,7 +14,7 @@ import OnboardingWizard from './components/OnboardingWizard';
 import ExamNexus from './components/ExamNexus';
 import Practice from './components/Practice';
 import PricingModal from './components/PricingModal';
-import { storage, setDriveToken } from './services/db';
+import { storage, setDriveToken, onAuthError } from './services/db';
 import { GoogleUser, VidyosUser, CreditTransaction } from './types';
 import { paymentService, SubscriptionStatus } from './services/payment';
 import { securityService } from './services/security';
@@ -22,6 +22,7 @@ import { useCredits } from './hooks/useCredits';
 import TimetableTest from './components/TimetableTest';
 import TimetableValidator from './components/TimetableValidator';
 import Background3D from './components/Background3D';
+import NexusView from './pages/NexusView';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<GoogleUser | null>(() => {
@@ -95,6 +96,15 @@ const App: React.FC = () => {
     } else {
       setIsLoading(false);
     }
+
+    const unsubscribeAuthError = onAuthError(() => {
+      alert("Your Google session has expired or is invalid. Please log in again.");
+      handleLogout();
+    });
+
+    return () => {
+      unsubscribeAuthError();
+    };
   }, [user]);
 
   async function checkSubscription() {
@@ -455,6 +465,14 @@ const App: React.FC = () => {
         )
       }
 
+
+
+      {view === 'nexus' && activeSessionId && (
+        <NexusView
+          session={sessions.find(s => s.id === activeSessionId)!}
+          onBack={() => navigateTo('session')}
+        />
+      )}
 
       {view === 'privacy' && <PrivacyPolicy />}
       {view === 'terms' && <TermsOfService />}

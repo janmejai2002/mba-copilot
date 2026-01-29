@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Subject, Session, Note } from '../types';
-import { Play, Calendar, FileText, ChevronRight, Clock, Plus, BarChart3, Search, UploadCloud, Mic, Layout, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Play, Calendar, FileText, ChevronRight, Clock, Plus, BarChart3, Search, UploadCloud, Mic, Layout, BookOpen, CheckCircle2, Sparkles, X } from 'lucide-react';
 import { format } from 'date-fns';
 import UnifiedInput from './UnifiedInput';
 import SubjectGraph from './SubjectGraph';
@@ -139,6 +139,39 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
 
                 {/* Middle Column: Intelligence & Pending Notes (Span 8) */}
                 <div className="lg:col-span-8 space-y-10">
+
+                    {/* Master AI Notes - The Master Store */}
+                    <div className="vidyos-card p-0 overflow-hidden border-[var(--vidyos-teal-glow)] shadow-2xl">
+                        <div className="bg-gradient-to-r from-[var(--vidyos-teal)] to-[var(--vidyos-teal-dark)] p-8 flex justify-between items-center text-white">
+                            <div>
+                                <span className="label-caps mb-2 text-white/60">Master Cognitive Store</span>
+                                <h2 className="text-3xl font-black tracking-tight">Evolving Subject Analysis</h2>
+                            </div>
+                            <button className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                Regenerate Analysis
+                            </button>
+                        </div>
+                        <div className="p-10 prose prose-teal max-w-none">
+                            <div className="flex items-center gap-4 mb-6 p-4 bg-[var(--vidyos-teal-light)] border border-[var(--vidyos-teal-glow)] rounded-2xl">
+                                <Sparkles className="w-5 h-5 text-[var(--vidyos-teal)]" />
+                                <p className="text-[12px] font-black text-[var(--vidyos-teal)] mb-0 uppercase tracking-widest">
+                                    AI-Powered Synthesis • Last Updated {subject.masterDocUpdated ? format(subject.masterDocUpdated, 'HH:mm dd MMM') : 'Never'}
+                                </p>
+                            </div>
+                            {subject.masterDoc ? (
+                                <div className="text-[var(--text-main)] font-medium leading-relaxed opacity-90 whitespace-pre-wrap">
+                                    {subject.masterDoc}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-20 bg-black/[0.02] rounded-3xl border border-dashed border-black/10">
+                                    <BookOpen className="w-12 h-12 text-black/10 mb-4" />
+                                    <h4 className="font-black text-xl text-black/20 uppercase tracking-widest">Initial Synthesis Pending</h4>
+                                    <p className="text-[11px] font-bold text-black/30 mt-2 max-w-xs text-center">Attend live sessions or upload materials to populate the Master Store.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
 
                     {/* Cross-Session Intelligence */}
                     <div className="vidyos-card p-12 bg-black text-white relative overflow-hidden group border-none shadow-2xl">

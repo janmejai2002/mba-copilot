@@ -8,6 +8,18 @@ export interface GoogleUser {
   expiresAt: number;
 }
 
+export interface Concept {
+  keyword: string;
+  explanation: string;
+  timestamp: number;
+  depth?: number; // 0 = root, 1-3 = nested layers
+  parentId?: string; // Reference to parent concept
+  children?: Concept[]; // Nested sub-concepts
+  isExpanded?: boolean; // AI-generated expansion flag
+  connections?: string[]; // IDs of related concepts
+  category?: 'formula' | 'trend' | 'example' | 'concept' | 'definition';
+}
+
 export interface Subject {
   id: string;
   userId?: string;
@@ -16,6 +28,8 @@ export interface Subject {
   faculty?: string; // Professor name
   description?: string;
   createdAt: number;
+  masterDoc?: string;
+  masterDocUpdated?: number;
 }
 
 export interface Session {

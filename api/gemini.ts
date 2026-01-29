@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const aiModel = genAI.getGenerativeModel({ model: model || 'gemini-1.5-flash-preview-0514' });
+        const aiModel = genAI.getGenerativeModel({ model: model || 'gemini-1.5-flash' });
 
         // Convert to the format expected by the SDK
         const result = await aiModel.generateContent({
@@ -28,8 +28,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const text = response.text();
 
         return res.status(200).json({ text });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Gemini API Error:', error);
-        return res.status(500).json({ error: 'Failed to call Gemini API' });
+        const status = error.status || 500;
+        const message = error.message || 'Failed to call Gemini API';
+        return res.status(status).json({ error: message, details: error.toString() });
     }
 }

@@ -52,10 +52,12 @@ export const googleDrive = {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('UNAUTHORIZED_DRIVE_ACCESS');
+                }
                 const errorData = await response.json();
                 if ((response.status === 403 || response.status === 404) && existingFileId) {
                     console.warn(`File ${existingFileId} inaccessible (status ${response.status}). Retrying as new file...`);
-                    // Remove the invalid ID and try again as a new file
                     return this.saveToAppData(accessToken, fileName, content);
                 }
                 throw new Error(errorData.error?.message || 'Drive API Error');

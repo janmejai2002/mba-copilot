@@ -6,24 +6,29 @@ import { paymentService } from '../services/payment';
 interface PricingModalProps {
     isOpen: boolean;
     onClose: () => void;
+    userEmail?: string | null;
+    userName?: string;
 }
 
-const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
+const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, userEmail, userName }) => {
     const [isProcessing, setIsProcessing] = React.useState(false);
 
     if (!isOpen) return null;
 
-    const handleUpgrade = async () => {
+    const handleDodoUpgrade = async () => {
         setIsProcessing(true);
-        const success = await paymentService.initiateCheckout();
+        const url = await paymentService.initiateDodoCheckout(userEmail || '');
         setIsProcessing(false);
-        if (success) {
-            onClose();
-            // Force a reload or state check to unlock features
-            window.location.reload();
-        } else {
-            alert("Payment Protocol Handshake Failed. Please verify your connection to the Neural Hub.");
-        }
+        if (url) window.location.href = url;
+        else alert("Dodo Protocol Failure. Please use UPI/Instamojo.");
+    };
+
+    const handleInstamojoUpgrade = async () => {
+        setIsProcessing(true);
+        const url = await paymentService.initiateInstamojoCheckout(userEmail || '', userName || 'Vidyos User');
+        setIsProcessing(false);
+        if (url) window.location.href = url;
+        else alert("Instamojo Handshake Failed. Please use Dodo/Global Page.");
     };
 
     const tiers = [
@@ -132,17 +137,31 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
                                     ))}
                                 </div>
 
-                                <button
-                                    onClick={tier.current ? undefined : handleUpgrade}
-                                    disabled={isProcessing}
-                                    className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${tier.current
-                                        ? 'bg-black/5 dark:bg-white/5 text-black/20 dark:text-white/20 cursor-default'
-                                        : 'bg-black dark:bg-white text-white dark:text-black hover:scale-[1.02] active:scale-95 shadow-xl disabled:opacity-50'
-                                        }`}
-                                >
-                                    {isProcessing && !tier.current && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {tier.buttonText}
-                                </button>
+                                {tier.highlight ? (
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleDodoUpgrade}
+                                            disabled={isProcessing}
+                                            className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl disabled:opacity-50"
+                                        >
+                                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Sovereign Passport (Global)'}
+                                        </button>
+                                        <button
+                                            onClick={handleInstamojoUpgrade}
+                                            disabled={isProcessing}
+                                            className="w-full py-4 bg-[var(--vidyos-teal)] text-white rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-[var(--vidyos-teal)]/20 disabled:opacity-50"
+                                        >
+                                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Quick UPI Pay (India)'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        disabled
+                                        className="w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all bg-black/5 dark:bg-white/5 text-black/20 dark:text-white/20 cursor-default"
+                                    >
+                                        {tier.buttonText}
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>

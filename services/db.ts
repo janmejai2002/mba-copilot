@@ -28,6 +28,12 @@ export const setDriveToken = (token: string) => {
     gapiAccessToken = token;
 };
 
+let authErrorCallback: (() => void) | null = null;
+export const onAuthError = (cb: () => void) => {
+    authErrorCallback = cb;
+    return () => { authErrorCallback = null; };
+};
+
 // Debounce timer for sync
 let syncTimeout: any = null;
 
@@ -48,8 +54,11 @@ const syncToDrive = async () => {
             const result = await googleDrive.saveToAppData(gapiAccessToken, 'vidyos_backup.json', backupData, gdriveFileId || undefined);
             if (result && result.id) gdriveFileId = result.id;
             console.log("✅ Drive Sync Complete");
-        } catch (e) {
+        } catch (e: any) {
             console.error("GDrive Sync Failed:", e);
+            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
+                authErrorCallback();
+            }
         }
     }, 30000); // 30 second debounce
 };
@@ -57,21 +66,31 @@ const syncToDrive = async () => {
 export const storage = {
     async pullFromDrive() {
         if (!gapiAccessToken) return;
-        const data = await googleDrive.getAppDataFile(gapiAccessToken, 'vidyos_backup.json');
-        if (data && data.content) {
-            gdriveFileId = data.id;
-            const { subjects, sessions } = data.content;
-            await db.subjects.bulkPut(subjects);
-            await db.sessions.bulkPut(sessions);
-            return true;
+        try {
+            const data = await googleDrive.getAppDataFile(gapiAccessToken, 'vidyos_backup.json');
+            if (data && data.content) {
+                gdriveFileId = data.id;
+                const { subjects, sessions } = data.content;
+                await db.subjects.bulkPut(subjects);
+                await db.sessions.bulkPut(sessions);
+                return true;
+            }
+            return false;
+        } catch (e: any) {
+            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
+                authErrorCallback();
+            }
+            return false;
         }
-        return false;
     },
     async getAllSubjects() {
         return await db.subjects.toArray();
     },
     async getAllSessions() {
         return await db.sessions.toArray();
+    },
+    async getSessionById(id: string) {
+        return await db.sessions.get(id);
     },
     async saveSubject(subject: Subject) {
         await db.subjects.put(subject);
