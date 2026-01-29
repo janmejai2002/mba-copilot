@@ -4,6 +4,8 @@ import { Subject, Session, TranscriptionTurn, Note, Attachment } from '../types'
 import { generateSessionInsight, extractConceptsFromMaterials } from '../services/gemini';
 import { callPerplexity, extractKeywords, explainConcept, generateSuggestedQuestions } from '../services/perplexity';
 import QAConsole from './QAConsole';
+// import KnowledgeGraph from './KnowledgeGraph';
+// TODO: Switch to EnhancedKnowledgeGraph after committing D3 to package.json
 import KnowledgeGraph from './EnhancedKnowledgeGraph';
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
