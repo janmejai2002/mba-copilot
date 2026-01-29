@@ -78,9 +78,47 @@ html {
 .apple-card:hover,
 .vidyos-card:hover {
     transform: translateY(-8px) scale(1.01);
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.85);
+    /* Slightly more opaque for better contrast */
     border-color: var(--vidyos-teal-glow);
     box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix for black cards with white text flipping on hover */
+.vidyos-card.bg-black:hover {
+    background: #fff !important;
+}
+
+.vidyos-card.bg-black:hover,
+.vidyos-card.bg-black:hover h1,
+.vidyos-card.bg-black:hover h2,
+.vidyos-card.bg-black:hover h3,
+.vidyos-card.bg-black:hover h4,
+.vidyos-card.bg-black:hover span:not(.label-caps) {
+    color: var(--text-main) !important;
+}
+
+.vidyos-card.bg-black:hover p {
+    color: var(--text-muted) !important;
+    opacity: 0.7;
+}
+
+.vidyos-card.bg-black:hover .label-caps {
+    color: var(--vidyos-teal) !important;
+}
+
+.vidyos-card.bg-black:hover input {
+    color: var(--text-main) !important;
+}
+
+.vidyos-card.bg-black:hover input::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.4;
+}
+
+.vidyos-card.bg-black:hover .bg-white\/10 {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 .dark .apple-card,
@@ -127,12 +165,29 @@ html {
 }
 
 .section-title {
-    font-size: 3rem;
+    font-size: 5rem;
     font-weight: 900;
-    letter-spacing: -0.04em;
-    line-height: 1.1;
-    margin-bottom: 24px;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
+    margin-bottom: 2rem;
     color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 3rem;
+    }
+
+    .apple-card,
+    .vidyos-card {
+        padding: 24px;
+        border-radius: 24px;
+    }
+
+    .btn-fusion {
+        padding: 12px 24px;
+        font-size: 0.75rem;
+    }
 }
 
 .label-caps {
@@ -501,4 +556,25 @@ html {
 
 .dark .shadow-2xl {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Mobile Safe Area for Bottom Nav */
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 120px !important;
+        /* Extra space for bottom nav */
+    }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
 }

@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import UnifiedInput from './UnifiedInput';
 import SubjectGraph from './SubjectGraph';
 import ClassScheduler from './ClassScheduler';
+import MaterialsVault from './MaterialsVault';
 
 interface SubjectHomeProps {
     subject: Subject;
@@ -19,6 +20,7 @@ interface SubjectHomeProps {
 const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, onOpenSession, onStartNewSession, onCreateScheduledSessions }) => {
     const [view, setView] = useState<'dashboard' | 'graph'>('dashboard');
     const [showScheduler, setShowScheduler] = useState(false);
+    const [showVault, setShowVault] = useState(false);
     const sortedSessions = [...sessions].sort((a, b) => b.date - a.date);
     const pendingNotes = sessions.flatMap(s => (s.notes || []).filter(n => n.status === 'pending'));
 
@@ -210,7 +212,10 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
 
                     {/* Interaction Hub Preview */}
                     <div className="grid grid-cols-2 gap-8">
-                        <div className="vidyos-card p-10 hover:bg-white/80 transition-all cursor-pointer group relative overflow-hidden">
+                        <div
+                            className="vidyos-card p-10 hover:bg-white/80 transition-all cursor-pointer group relative overflow-hidden"
+                            onClick={() => setShowVault(true)}
+                        >
                             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-20 transition-opacity">
                                 <BookOpen className="w-20 h-20" />
                             </div>
@@ -248,6 +253,13 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
                     onClose={() => setShowScheduler(false)}
                 />
             )}
+
+            <MaterialsVault
+                isOpen={showVault}
+                onClose={() => setShowVault(false)}
+                subjectId={subject.id}
+                subjectName={subject.name}
+            />
         </div>
     );
 };

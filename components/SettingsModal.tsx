@@ -96,6 +96,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <Key className="w-4 h-4 text-black/30" />
                                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">Deepgram (Live Audio)</h3>
                             </div>
+                            <a href="https://console.deepgram.com/signup" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Get Key</a>
                         </div>
                         <input
                             type="password"
@@ -104,6 +105,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             placeholder="DG-..."
                             className="w-full px-5 py-4 bg-black/[0.03] border border-black/[0.05] rounded-2xl text-sm font-mono placeholder:text-black/20 outline-none focus:border-black/20 focus:bg-white transition-all"
                         />
+                        <p className="text-[10px] text-black/30 leading-relaxed">Required for real-time Hinglish transcription. Enable 'Nova-2' model for best results.</p>
                     </div>
 
                     <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex gap-4 items-start">

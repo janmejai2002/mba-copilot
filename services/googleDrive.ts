@@ -2,14 +2,7 @@
 const DRIVE_API_URL = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API_URL = 'https://www.googleapis.com/upload/drive/v3/files';
 
-export interface GoogleUser {
-    id: string;
-    email: string;
-    name: string;
-    picture: string;
-    accessToken: string;
-    expiresAt: number;
-}
+import { GoogleUser } from '../types';
 
 export const googleDrive = {
     async getAppDataFile(accessToken: string, fileName: string) {

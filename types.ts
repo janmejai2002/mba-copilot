@@ -1,4 +1,13 @@
 
+export interface GoogleUser {
+  id: string;
+  email: string;
+  name: string;
+  picture: string;
+  accessToken: string;
+  expiresAt: number;
+}
+
 export interface Subject {
   id: string;
   userId?: string;
@@ -36,6 +45,17 @@ export interface GroundingFileDetail {
   size: number;
 }
 
+export interface GroundingMaterial {
+  id: string;
+  subjectId: string;
+  name: string;
+  type: string;
+  data: string; // Base64
+  size: number;
+  uploadedAt: number;
+  status: 'indexed' | 'processing' | 'failed';
+}
+
 export interface TranscriptionTurn {
   role: 'user' | 'model' | 'system';
   text: string;
@@ -65,4 +85,20 @@ export interface SubjectKnowledgeBase {
   totalHours: number;
   keyThemes: string[];
   aggregatedNotes: Note[];
+}
+
+export interface VidyosUser extends GoogleUser {
+  credits: number;
+  isSovereign: boolean;
+  tier: 'Synthesist' | 'Sovereign';
+  lastRechargeAt?: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  userId: string;
+  amount: number; // Positive for recharge, negative for consumption
+  type: 'recharge' | 'transcription' | 'synthesis' | 'exam_nexus';
+  description: string;
+  timestamp: number;
 }

@@ -189,8 +189,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 </div>
                 <div className="flex items-center gap-10">
                     <div className="hidden md:flex gap-8">
-                        <a href="#lab" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">Neural Lab</a>
-                        <a href="#storage" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">Continuity</a>
+                        <a href="#lab" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity" aria-label="Neural Lab Features">Neural Lab</a>
+                        <a href="#continuity" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity" aria-label="Privacy & Continuity">Continuity</a>
                     </div>
                     <button onClick={onGetStarted} className="px-6 py-2.5 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-110 active:scale-95 transition-all">
                         Initiate Synapse
@@ -201,11 +201,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             {/* Hero Section */}
             <section className="relative h-screen flex flex-col justify-center items-center text-center px-6 z-10 pt-20">
                 <span className="f-reveal text-[#14b8a6] text-[11px] font-black uppercase tracking-[0.8em] mb-8">Personal Truth Engine</span>
-                <h1 className="f-reveal text-[6rem] md:text-[9rem] font-black tracking-[-0.06em] leading-[0.85] mb-12 bg-gradient-to-b from-black to-black/40 bg-clip-text text-transparent">
-                    MAP YOUR<br />REALITY.
+                <h1 className="f-reveal text-[3.5rem] md:text-[9rem] font-black tracking-[-0.06em] leading-[0.85] mb-12 bg-gradient-to-b from-black to-black/40 bg-clip-text text-transparent">
+                    MBA CLASS<br />MAPPER.
                 </h1>
                 <p className="f-reveal text-[1.5rem] font-bold text-black/40 max-w-2xl leading-relaxed mb-16">
-                    Not just a tool. A cognitive mirror that grounds AI reasoning in your actual materials—zero hallucination, infinite depth.
+                    The ultimate AI study copilot. A cognitive mirror that grounds AI reasoning in your actual MBA materials, PDFs, and lectures—zero hallucination, infinite depth.
                 </p>
                 <div className="f-reveal">
                     <button onClick={onGetStarted} className="btn-primary" style={{ padding: '24px 60px', fontSize: '1.2rem' }}>
@@ -248,10 +248,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 </div>
 
                 {/* Module 03: Local Sovereignty */}
-                <div className="col-span-12 lg:col-span-4 vidyos-card p-12 h-[450px] bg-black text-white">
+                <div id="continuity" className="col-span-12 lg:col-span-4 vidyos-card p-12 h-[450px] bg-black text-white">
                     <span className="label-caps text-[#14b8a6]">Identity Hub</span>
-                    <h3 className="text-3xl font-black mb-6 mt-4">Local First.<br />Privacy Always.</h3>
-                    <p className="opacity-40 font-bold leading-relaxed">Your data never leaves your infrastructure. Local NPU processing for Hinglish transcription means zero latency and total sovereignty.</p>
+                    <h3 className="text-3xl font-black mb-6 mt-4">Local First.<br />Sovereign AI.</h3>
+                    <p className="opacity-40 font-bold leading-relaxed">Your data never leaves your infrastructure. Local NPU processing for Hinglish transcription means zero latency and total MBA data sovereignty.</p>
                 </div>
 
                 {/* Module 04: The Predictor */}

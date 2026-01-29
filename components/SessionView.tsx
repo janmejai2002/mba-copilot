@@ -20,6 +20,7 @@ interface SessionViewProps {
   isMiniMode?: boolean;
   setIsMiniMode?: (val: boolean) => void;
   onExpand?: () => void;
+  consumeCredits: (amount: number, operation: string) => Promise<boolean>;
 }
 
 const SessionView: React.FC<SessionViewProps> = ({
@@ -29,7 +30,8 @@ const SessionView: React.FC<SessionViewProps> = ({
   onUpdateSession,
   isMiniMode = false,
   setIsMiniMode,
-  onExpand
+  onExpand,
+  consumeCredits
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState<TranscriptionTurn[]>(session.turns || []);
@@ -47,6 +49,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   const [transcriptModalOpen, setTranscriptModalOpen] = useState(false);
   const [consoleModalOpen, setConsoleModalOpen] = useState(false);
   const [graphModalOpen, setGraphModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [notifications, setNotifications] = useState<Array<{ id: string; type: 'concept' | 'question' | 'success'; message: string; timestamp: number }>>([]);
   const [consoleMessages, setConsoleMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
@@ -95,6 +98,37 @@ const SessionView: React.FC<SessionViewProps> = ({
     onUpdateSession({ ...session, aiContext: e.target.value });
     setContextSaved(false);
     setTimeout(() => setContextSaved(true), 1000);
+  };
+
+  const syncKnowledgeGraph = async () => {
+    if (transcription.length < 5) return;
+    setIsSyncing(true);
+    try {
+      const charged = await consumeCredits(10, 'Knowledge Graph Sync');
+      if (!charged) return;
+
+      const fullText = transcription.map(t => t.text).join('\n');
+      const keywords = await extractKeywords(fullText);
+      const newConcepts = [...concepts];
+
+      for (const kw of keywords) {
+        if (!newConcepts.some(c => c.keyword.toLowerCase() === kw.toLowerCase())) {
+          const explanation = await explainConcept(kw, fullText);
+          newConcepts.push({
+            keyword: kw,
+            explanation,
+            timestamp: Date.now()
+          });
+        }
+      }
+
+      setConcepts(newConcepts);
+      onUpdateSession({ ...session, concepts: newConcepts });
+    } catch (e) {
+      console.error("Sync failed:", e);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
@@ -153,15 +187,11 @@ const SessionView: React.FC<SessionViewProps> = ({
 
   const startRecording = useCallback(async () => {
     try {
-      let token = import.meta.env.VITE_DEEPGRAM_API_KEY;
+      let token = localStorage.getItem('custom_deepgram_key') || import.meta.env.VITE_DEEPGRAM_API_KEY;
 
       if (!token) {
         try {
-          const tokenResponse = await fetch('/api/deepgram-token', {
-            headers: {
-              'x-custom-deepgram-key': localStorage.getItem('custom_deepgram_key') || ''
-            }
-          });
+          const tokenResponse = await fetch('/api/deepgram-token');
           if (tokenResponse.ok) {
             const data = await tokenResponse.json();
             token = data.token;
@@ -284,6 +314,9 @@ const SessionView: React.FC<SessionViewProps> = ({
     setIsSummarizing(true);
     const fullText = transcription.map(t => t.text).join(' ');
     try {
+      const charged = await consumeCredits(20, 'Session Synthesis');
+      if (!charged) return;
+
       const res = await generateSessionInsight(fullText);
       setInsight(res);
       onUpdateSession({ ...session, summary: res.summary, examQuestions: res.examQuestions, transcript: fullText });
@@ -373,13 +406,13 @@ const SessionView: React.FC<SessionViewProps> = ({
           Return to Library
         </button>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10">
           <div className="flex-1 w-full group">
             <span className="label-caps mb-3">{subject.name} • Session Active</span>
-            <h2 className="section-title mb-0 pr-10">{session.title}</h2>
+            <h2 className="text-3xl md:text-5xl font-black tracking-[-0.04em] mb-0 pr-10">{session.title}</h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto bg-[var(--glass-heavy)] p-3 rounded-[2.5rem] border border-[var(--glass-border)] backdrop-blur-xl shadow-[var(--shadow-premium)]">
+          <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto bg-[var(--glass-heavy)] p-2 md:p-3 rounded-[2rem] md:rounded-[2.5rem] border border-[var(--glass-border)] backdrop-blur-xl shadow-[var(--shadow-premium)]">
             <div className="flex items-center gap-2 px-2">
               <button
                 onClick={() => setVolumeBoost(prev => prev === 2.0 ? 1.0 : 2.0)}
@@ -525,6 +558,9 @@ const SessionView: React.FC<SessionViewProps> = ({
             <QAConsole
               suggestedQuestions={suggestedQuestions}
               onAskAI={async (query) => {
+                const charged = await consumeCredits(5, 'Neural Doubt Resolution');
+                if (!charged) return "Insufficient Neural Balance. Please recharge the protocol.";
+
                 const context = transcription.slice(-50).map(t => t.text).join(' ');
                 return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
               }}
@@ -535,7 +571,7 @@ const SessionView: React.FC<SessionViewProps> = ({
           </div>
 
           <div className="vidyos-card p-1">
-            <KnowledgeGraph concepts={concepts} />
+            <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
           </div>
 
           {insight && (
@@ -566,6 +602,9 @@ const SessionView: React.FC<SessionViewProps> = ({
           <QAConsole
             suggestedQuestions={suggestedQuestions}
             onAskAI={async (query) => {
+              const charged = await consumeCredits(5, 'Neural Doubt Resolution');
+              if (!charged) return "Insufficient Neural Balance. Please recharge the protocol.";
+
               const context = transcription.slice(-100).map(t => t.text).join(' ');
               return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
             }}
@@ -575,9 +614,22 @@ const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </ExpandableModal>
 
-      <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Knowledge Architecture">
+      <ExpandableModal
+        isOpen={graphModalOpen}
+        onClose={() => setGraphModalOpen(false)}
+        title="Knowledge Architecture"
+        actions={
+          <button
+            onClick={syncKnowledgeGraph}
+            disabled={isSyncing}
+            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isSyncing ? 'bg-black/5 text-black/20' : 'bg-black text-white hover:scale-110 active:scale-95'}`}
+          >
+            {isSyncing ? 'Neural Sync...' : 'Force Neural Sync'}
+          </button>
+        }
+      >
         <div className="h-[80vh]">
-          <KnowledgeGraph concepts={concepts} />
+          <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
         </div>
       </ExpandableModal>
     </div>

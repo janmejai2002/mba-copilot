@@ -12,6 +12,7 @@ interface Concept {
 
 interface KnowledgeGraphProps {
     concepts: Concept[];
+    isSyncing?: boolean;
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -55,7 +56,7 @@ const calculateSimilarity = (text1: string, text2: string): number => {
     return intersection.size / Math.max(words1.size, words2.size, 1);
 };
 
-const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts }) => {
+const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyncing = false }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
@@ -250,6 +251,22 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts }) => 
                     d.fx = null;
                     d.fy = null;
                 }));
+
+        // Node Glow/Pulse for Syncing
+        const nodeGlow = node.append('circle')
+            .attr('r', 25)
+            .attr('fill', '#14b8a6')
+            .attr('opacity', 0)
+            .attr('class', isSyncing ? 'animate-pulse' : '');
+
+        if (isSyncing) {
+            nodeGlow
+                .transition()
+                .duration(2000)
+                .attr('opacity', 0.2)
+                .style('filter', 'blur(4px)')
+                .attr('r', 35);
+        }
 
         // Node circles with size based on importance
         node.append('circle')

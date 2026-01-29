@@ -13,7 +13,7 @@ export class VidyosDatabase extends Dexie {
         this.version(1).stores({
             subjects: 'id, name, createdAt, userId',
             sessions: 'id, subjectId, date, title, userId',
-            groundingMaterials: 'id, sessionId, name'
+            groundingMaterials: 'id, subjectId, name'
         });
     }
 }
@@ -173,5 +173,18 @@ export const storage = {
         await db.subjects.bulkAdd(defaultSubjects);
         syncToDrive();
         console.log('✅ Initialized default study subjects');
+    },
+
+    // --- Neural Vault Store ---
+    async saveGroundingMaterial(material: any) {
+        await db.groundingMaterials.put(material);
+        syncToDrive();
+    },
+    async deleteGroundingMaterial(id: string) {
+        await db.groundingMaterials.delete(id);
+        syncToDrive();
+    },
+    async getGroundingMaterials(subjectId: string) {
+        return await db.groundingMaterials.where('subjectId').equals(subjectId).toArray();
     }
 };

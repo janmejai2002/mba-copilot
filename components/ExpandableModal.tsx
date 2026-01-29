@@ -7,9 +7,11 @@ interface ExpandableModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    actions?: React.ReactNode;
+    icon?: React.ReactNode;
 }
 
-const ExpandableModal: React.FC<ExpandableModalProps> = ({ isOpen, onClose, title, children }) => {
+const ExpandableModal: React.FC<ExpandableModalProps> = ({ isOpen, onClose, title, children, actions, icon }) => {
     // Prevent body scroll when modal is open
     useEffect(() => {
         if (isOpen) {
@@ -47,16 +49,22 @@ const ExpandableModal: React.FC<ExpandableModalProps> = ({ isOpen, onClose, titl
             <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-5 bg-white/95 backdrop-blur-sm border-b border-black/5">
-                    <h2 className="text-sm font-bold uppercase tracking-[0.3em] text-black/60">
-                        {title}
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-black/5 rounded-xl transition-all active:scale-95"
-                        aria-label="Close modal"
-                    >
-                        <X className="w-5 h-5 text-black/40" />
-                    </button>
+                    <div className="flex items-center gap-4">
+                        {icon && icon}
+                        <h2 className="text-sm font-bold uppercase tracking-[0.3em] text-black/60">
+                            {title}
+                        </h2>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        {actions && actions}
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-black/5 rounded-xl transition-all active:scale-95"
+                            aria-label="Close modal"
+                        >
+                            <X className="w-5 h-5 text-black/40" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
