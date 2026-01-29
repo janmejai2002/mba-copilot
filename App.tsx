@@ -6,6 +6,7 @@ import SessionView from './components/SessionView';
 import SubjectHome from './components/SubjectHome';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
+import LandingPage from './components/LandingPage';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import { storage, setDriveToken } from './services/db';
@@ -25,6 +26,7 @@ const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [isMiniMode, setIsMiniMode] = useState(false);
   const [hash, setHash] = useState(window.location.hash);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => setHash(window.location.hash);
@@ -74,6 +76,7 @@ const App: React.FC = () => {
     localStorage.removeItem('mba_user');
     setSubjects([]);
     setSessions([]);
+    setShowAuth(false);
   };
 
   useEffect(() => {
@@ -135,14 +138,6 @@ const App: React.FC = () => {
 
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
 
-  if (isLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center font-bold text-black/20 animate-pulse bg-[#f5f5f7]">Syncing with Drive...</div>;
-  }
-
-  if (!user) {
-    return <Auth onAuthComplete={handleAuthComplete} />;
-  }
-
   if (hash === '#privacy') {
     return <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}><PrivacyPolicy /></Layout>;
   }
@@ -151,8 +146,20 @@ const App: React.FC = () => {
     return <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}><TermsOfService /></Layout>;
   }
 
+  if (isLoading) {
+    return <div className="h-screen w-screen flex items-center justify-center font-bold text-black/20 animate-pulse bg-[#f5f5f7]">Syncing with Drive...</div>;
+  }
+
+  if (!user && !showAuth) {
+    return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+  }
+
+  if (!user && showAuth) {
+    return <Auth onAuthComplete={handleAuthComplete} />;
+  }
+
   return (
-    <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user.email} onLogout={handleLogout}>
+    <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} userEmail={user?.email} onLogout={handleLogout}>
       {view === 'dashboard' && (
         <Dashboard
           subjects={subjects}
