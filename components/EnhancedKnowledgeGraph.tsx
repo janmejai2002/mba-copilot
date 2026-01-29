@@ -277,7 +277,7 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts }) => 
                 });
 
                 node.selectAll('circle')
-                    .attr('opacity', n => connectedIds.has(n.id) || n.id === d.id ? 1 : 0.3);
+                    .attr('opacity', (n: any) => connectedIds.has(n.id) || n.id === d.id ? 1 : 0.3);
                 link.attr('opacity', l => {
                     const sourceId = (l.source as GraphNode).id || l.source as string;
                     const targetId = (l.target as GraphNode).id || l.target as string;
@@ -471,8 +471,8 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts }) => 
                     <button
                         onClick={toggleLearningPath}
                         className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showLearningPath
-                                ? 'bg-purple-600 text-white shadow-lg'
-                                : 'bg-black/[0.02] text-black/60 hover:bg-black/[0.04]'
+                            ? 'bg-purple-600 text-white shadow-lg'
+                            : 'bg-black/[0.02] text-black/60 hover:bg-black/[0.04]'
                             }`}
                     >
                         <Route className="w-3 h-3" />

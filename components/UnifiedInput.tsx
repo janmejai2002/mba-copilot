@@ -21,7 +21,7 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
         onSend(text, attachments, inputType);
         setText('');
         setAttachments([]);
-        setInputType('note'); // Reset to default
+        setInputType('note');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -66,26 +66,35 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
 
     const getTypeIcon = (type: 'note' | 'question' | 'todo') => {
         switch (type) {
-            case 'question': return <HelpCircle className="w-3 h-3 text-orange-500" />;
-            case 'todo': return <AlertCircle className="w-3 h-3 text-red-500" />;
-            default: return <FileText className="w-3 h-3 text-blue-500" />;
+            case 'question': return <HelpCircle className="w-3.5 h-3.5" />;
+            case 'todo': return <AlertCircle className="w-3.5 h-3.5" />;
+            default: return <FileText className="w-3.5 h-3.5" />;
+        }
+    };
+
+    const getModeStyles = (type: 'note' | 'question' | 'todo', active: boolean) => {
+        if (!active) return "bg-black/[0.03] text-[var(--text-muted)] hover:bg-black/[0.06] opacity-40";
+        switch (type) {
+            case 'question': return "bg-[var(--vidyos-gold)] text-white shadow-lg shadow-[var(--vidyos-gold)]/20";
+            case 'todo': return "bg-red-500 text-white shadow-lg shadow-red-500/20";
+            default: return "bg-[var(--vidyos-teal)] text-white shadow-lg shadow-[var(--vidyos-teal)]/20";
         }
     };
 
     return (
         <div
-            className={`relative rounded-xl border transition-all ${isDragging ? 'border-blue-500 bg-blue-50/10' : 'border-black/10 bg-white/50 backdrop-blur-md'} ${isLive ? 'shadow-lg' : ''}`}
+            className={`vidyos-card p-0 overflow-hidden border transition-all duration-500 ${isDragging ? 'border-[var(--vidyos-teal)] ring-4 ring-[var(--vidyos-teal-light)]' : 'border-[var(--glass-border)]'}`}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
         >
-            {/* Type Selector Pills */}
-            <div className="flex gap-2 px-3 pt-3">
+            {/* Mode Switcher */}
+            <div className="flex gap-2 px-6 pt-6 mb-4">
                 {(['note', 'question', 'todo'] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setInputType(t)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all ${inputType === t ? 'bg-black text-white' : 'bg-black/5 text-black/40 hover:bg-black/10'}`}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${getModeStyles(t, inputType === t)}`}
                     >
                         {getTypeIcon(t)}
                         {t}
@@ -95,34 +104,34 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
 
             {/* Attachments Preview */}
             {attachments.length > 0 && (
-                <div className="flex gap-2 px-3 pt-2 overflow-x-auto">
+                <div className="flex gap-4 px-6 mb-4 overflow-x-auto pb-2 custom-scrollbar">
                     {attachments.map(att => (
-                        <div key={att.id} className="relative group flex-shrink-0">
+                        <div key={att.id} className="relative group flex-shrink-0 animate-apple-in">
                             {att.type === 'image' ? (
-                                <img src={att.url} alt={att.name} className="h-10 w-10 object-cover rounded-lg border border-black/10" />
+                                <img src={att.url} alt={att.name} className="h-16 w-16 object-cover rounded-2xl border border-[var(--glass-border)] shadow-sm" />
                             ) : (
-                                <div className="h-10 w-10 flex items-center justify-center bg-black/5 rounded-lg border border-black/10">
-                                    <FileText className="w-4 h-4 text-black/40" />
+                                <div className="h-16 w-16 flex items-center justify-center bg-black/[0.03] rounded-2xl border border-[var(--glass-border)]">
+                                    <FileText className="w-6 h-6 text-[var(--text-muted)]" />
                                 </div>
                             )}
                             <button
                                 onClick={() => setAttachments(attachments.filter(a => a.id !== att.id))}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center scale-0 group-hover:scale-100 transition-transform shadow-xl"
                             >
-                                <X className="w-2 h-2" />
+                                <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Main Input Area */}
-            <div className="flex items-end gap-2 p-3">
+            {/* Input Interface */}
+            <div className="flex items-end gap-4 px-6 pb-6">
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2 hover:bg-black/5 rounded-lg text-black/40 transition-colors"
+                    className="p-4 bg-black/[0.03] hover:bg-black/[0.06] rounded-2xl text-[var(--text-muted)] transition-all active:scale-90"
                 >
-                    <Paperclip className="w-4 h-4" />
+                    <Paperclip className="w-5 h-5" />
                 </button>
                 <input
                     type="file"
@@ -137,9 +146,9 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="flex-1 max-h-32 min-h-[20px] bg-transparent border-none outline-none text-sm resize-none py-2 placeholder:text-black/30"
+                    className="flex-1 max-h-48 min-h-[50px] bg-transparent border-none outline-none text-md font-bold text-[var(--text-main)] resize-none py-4 placeholder:text-[var(--text-muted)] placeholder:opacity-30 leading-relaxed"
                     rows={1}
-                    style={{ height: 'auto', minHeight: '24px' }}
+                    style={{ height: 'auto' }}
                     onInput={(e) => {
                         const target = e.target as HTMLTextAreaElement;
                         target.style.height = 'auto';
@@ -150,15 +159,19 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
                 <button
                     onClick={handleSend}
                     disabled={!text.trim() && attachments.length === 0}
-                    className="p-2 bg-black text-white rounded-lg hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    className={`p-4 rounded-2xl transition-all shadow-xl active:scale-95 ${(!text.trim() && attachments.length === 0) ? 'bg-black/5 text-black/10' : 'bg-black text-white shadow-black/20 hover:scale-105'}`}
                 >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-5 h-5" />
                 </button>
             </div>
 
             {isDragging && (
-                <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-dashed border-blue-500 z-10">
-                    <div className="text-blue-600 font-bold text-xs uppercase tracking-widest">Drop files to attach</div>
+                <div className="absolute inset-0 bg-[var(--vidyos-teal)]/10 backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed border-[var(--vidyos-teal)] z-50 animate-apple-in">
+                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-4">
+                        <Paperclip className="w-8 h-8 text-[var(--vidyos-teal)]" />
+                    </div>
+                    <span className="label-caps mb-0 text-[var(--vidyos-teal)]">Neural Input Mapping</span>
+                    <p className="text-[11px] font-black uppercase text-[var(--vidyos-teal)] opacity-60">Release to attach node</p>
                 </div>
             )}
         </div>

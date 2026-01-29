@@ -1,422 +1,288 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Sparkles } from 'lucide-react';
 
 interface LandingPageProps {
     onGetStarted: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
-    const canvasRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
-        // --- THREE.JS ENGINE ---
-        let scene: THREE.Scene, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer, crystal: THREE.Group;
-        let mouseX = 0, mouseY = 0;
-        let targetX = 0, targetY = 0;
+        if (!canvasRef.current) return;
 
-        const initThree = () => {
-            if (!canvasRef.current) return;
+        // --- 2026 KNOWLEDGE ARCHITECTURE ENGINE ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvasRef.current,
+            alpha: true,
+            antialias: true,
+            powerPreference: "high-performance"
+        });
 
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 6;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.position.setZ(80);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
-            canvasRef.current.appendChild(renderer.domElement);
+        // --- SHADERS: LIQUID GLASS ORBS ---
+        const holoVertex = `
+            varying vec2 vUv;
+            varying float vGlow;
+            uniform float uTime;
+            void main() {
+                vUv = uv;
+                vec3 pos = position;
+                pos.x += sin(pos.y * 5.0 + uTime) * 0.05;
+                vGlow = pow(0.7 - dot(normalize(normalMatrix * normal), vec3(0,0,1)), 3.0);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `;
+        const holoFragment = `
+            varying vec2 vUv;
+            varying float vGlow;
+            uniform vec3 uColor;
+            void main() {
+                gl_FragColor = vec4(uColor + vGlow, 0.45);
+            }
+        `;
 
-            // Antigravity Crystal Geometry
-            const geometry = new THREE.IcosahedronGeometry(2, 0);
-            const material = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff,
-                metalness: 0.1,
-                roughness: 0.05,
-                transmission: 0.95,
-                thickness: 1.5,
-                transparent: true,
-                opacity: 0.4,
-                clearcoat: 1,
-                clearcoatRoughness: 0,
+        // --- SACRED GEOMETRY CENTERPIECE ---
+        const mandalaGroup = new THREE.Group();
+        const mandalaMat = new THREE.MeshStandardMaterial({
+            color: 0xb45309, // Vidyos Gold 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.12
+        });
+
+        const soulMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(18, 1), mandalaMat);
+        const ringMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(14, 0.4, 128, 16), mandalaMat);
+        mandalaGroup.add(soulMesh, ringMesh);
+        scene.add(mandalaGroup);
+
+        // --- HOLOGRAPHIC GRID FLOORS ---
+        const topGrid = new THREE.GridHelper(600, 40, 0x14b8a6, 0x14b8a6);
+        topGrid.position.y = 100;
+        topGrid.material.transparent = true;
+        topGrid.material.opacity = 0.03;
+        scene.add(topGrid);
+
+        const bottomGrid = new THREE.GridHelper(600, 40, 0xb45309, 0xb45309);
+        bottomGrid.position.y = -100;
+        bottomGrid.material.transparent = true;
+        bottomGrid.material.opacity = 0.03;
+        scene.add(bottomGrid);
+
+        // --- KNOWLEDGE ORBS ---
+        const orbs: THREE.Mesh[] = [];
+        const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+        const colors = [new THREE.Color(0x14b8a6), new THREE.Color(0xb45309), new THREE.Color(0xffffff)];
+
+        for (let i = 0; i < 30; i++) {
+            const mat = new THREE.ShaderMaterial({
+                vertexShader: holoVertex,
+                fragmentShader: holoFragment,
+                uniforms: { uTime: { value: 0 }, uColor: { value: colors[i % 3] } },
+                transparent: true
+            });
+            const orb = new THREE.Mesh(sphereGeo, mat);
+            const scale = Math.random() * 6 + 2;
+            orb.scale.set(scale, scale, scale);
+            orb.position.set(
+                THREE.MathUtils.randFloatSpread(250),
+                THREE.MathUtils.randFloatSpread(150),
+                THREE.MathUtils.randFloatSpread(100)
+            );
+            orb.userData = { vel: new THREE.Vector3(Math.random() * 0.02 - 0.01, Math.random() * 0.02 - 0.01, Math.random() * 0.02 - 0.01) };
+            scene.add(orb);
+            orbs.push(orb);
+        }
+
+        // --- NEURAL CONNECTIONS ---
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.06 });
+        const lines: { line: THREE.Line; o1: THREE.Mesh; o2: THREE.Mesh }[] = [];
+        for (let i = 0; i < 15; i++) {
+            const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            const line = new THREE.Line(geo, lineMat);
+            scene.add(line);
+            lines.push({ line, o1: orbs[i], o2: orbs[i + 15] });
+        }
+
+        // --- LIGHTING ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+        const p1 = new THREE.PointLight(0xffffff, 1.5);
+        p1.position.set(50, 50, 50);
+        scene.add(p1);
+
+        // --- INTERACTION ---
+        let mx = 0, my = 0, tx = 0, ty = 0;
+        const onMouseMove = (e: MouseEvent) => {
+            tx = (e.clientX / window.innerWidth) - 0.5;
+            ty = (e.clientY / window.innerHeight) - 0.5;
+        };
+        window.addEventListener('mousemove', onMouseMove);
+
+        const animate = () => {
+            const frameId = requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+
+            mx += (tx - mx) * 0.05;
+            my += (ty - my) * 0.05;
+
+            mandalaGroup.rotation.y += 0.002;
+            mandalaGroup.position.y = Math.sin(time) * 4;
+
+            orbs.forEach(orb => {
+                (orb.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
+                orb.position.add(orb.userData.vel);
+                orb.position.x += mx * 0.04;
+                orb.position.y -= my * 0.04;
+                if (Math.abs(orb.position.x) > 120) orb.userData.vel.x *= -1;
+                if (Math.abs(orb.position.y) > 90) orb.userData.vel.y *= -1;
             });
 
-            const wireframeMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.1
+            lines.forEach(l => {
+                l.line.geometry.setFromPoints([l.o1.position, l.o2.position]);
+                l.line.geometry.attributes.position.needsUpdate = true;
             });
 
-            crystal = new THREE.Group();
-            const mesh = new THREE.Mesh(geometry, material);
-            const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
-            crystal.add(mesh);
-            crystal.add(wireframe);
-            scene.add(crystal);
+            camera.position.z = 80 + window.scrollY * -0.012;
+            camera.position.x = mx * 20;
+            camera.position.y = -my * 20;
+            camera.lookAt(0, 0, 0);
 
-            // Inner core for depth
-            const innerGeometry = new THREE.IcosahedronGeometry(1.2, 1);
-            const innerMaterial = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.1,
-                transparent: true,
-                opacity: 0.1,
-                flatShading: true
-            });
-            const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
-            crystal.add(innerMesh);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-
-            const pointLight = new THREE.PointLight(0xffffff, 15);
-            pointLight.position.set(5, 5, 5);
-            scene.add(pointLight);
-
-            const blueLight = new THREE.PointLight(0x0066ff, 10);
-            blueLight.position.set(-5, -5, 5);
-            scene.add(blueLight);
-
-            const animate = () => {
-                requestAnimationFrame(animate);
-                const time = Date.now() * 0.001;
-
-                // Gentle levitation and rotation
-                crystal.position.y = Math.sin(time * 0.5) * 0.2;
-                crystal.rotation.y += 0.005;
-                crystal.rotation.z += 0.002;
-
-                // Magnetic Mouse Pull
-                targetX = (mouseX * 2);
-                targetY = (mouseY * 2);
-                crystal.position.x += (targetX - crystal.position.x) * 0.05;
-                crystal.position.y += (-targetY - crystal.position.y) * 0.05;
-
-                renderer.render(scene, camera);
-            };
-
-            animate();
+            renderer.render(scene, camera);
+            return frameId;
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
-            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-            mouseY = (e.clientY / window.innerHeight) * 2 - 1;
-        };
+        const frameId = animate();
 
-        const handleResize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
-
-        initThree();
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('resize', handleResize);
-
-        // --- GSAP ANIMATIONS ---
+        // --- GSAP REVEALS ---
         gsap.registerPlugin(ScrollTrigger);
-
-        gsap.from('.reveal', {
-            opacity: 0,
-            y: 30,
-            duration: 1.2,
-            stagger: 0.15,
-            ease: 'power4.out'
-        });
-
-        document.querySelectorAll('.scroll-reveal').forEach((el) => {
-            gsap.to(el, {
-                opacity: 1,
-                y: 0,
-                duration: 1.2,
-                ease: "power4.out",
-                scrollTrigger: {
-                    trigger: el,
-                    start: "top 85%",
-                }
-            });
-        });
-
-        // Lecture Bar Animation
-        gsap.to('.lecture-bar', {
-            height: (i) => ["60%", "90%", "40%", "80%", "50%", "95%", "30%", "70%"][i % 8],
-            duration: 2,
-            stagger: 0.1,
-            repeat: -1,
-            yoyo: true,
-            ease: "sine.inOut"
-        });
+        gsap.from('.f-reveal', { opacity: 0, y: 50, duration: 1.5, stagger: 0.2, ease: "power4.out" });
 
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('resize', handleResize);
-            if (renderer) renderer.dispose();
-            if (canvasRef.current) canvasRef.current.innerHTML = '';
+            window.removeEventListener('mousemove', onMouseMove);
+            cancelAnimationFrame(frameId);
+            renderer.dispose();
         };
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden selection:bg-white selection:text-black font-sans">
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-                
-                :root {
-                    --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
-                    --font-mono: "SF Mono", "Fira Code", monospace;
-                }
+        <div className="min-h-screen bg-[#fcfcfd] text-[#09090b] selection:bg-[#14b8a6] selection:text-white font-outfit overflow-x-hidden">
+            <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-1" />
 
-                body {
-                    font-family: var(--font-sans);
-                }
-
-                .grid-overlay {
-                    position: fixed;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                    background-image: 
-                        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-                    background-size: 80px 80px;
-                    pointer-events: none;
-                    z-index: 1;
-                    opacity: 0.3;
-                }
-
-                .hero-section {
-                    height: 100vh;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    position: relative;
-                    z-index: 3;
-                    pointer-events: none;
-                    text-align: center;
-                }
-
-                .hero-content {
-                    max-width: 900px;
-                    pointer-events: auto;
-                }
-
-                h1 {
-                    font-size: clamp(3.5rem, 10vw, 6.5rem);
-                    font-weight: 800;
-                    letter-spacing: -0.04em;
-                    line-height: 0.95;
-                    margin-bottom: 32px;
-                    background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.4) 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-
-                .cta-button {
-                    background: #fff;
-                    color: #000;
-                    padding: 18px 40px;
-                    border-radius: 2px;
-                    text-decoration: none;
-                    font-weight: 700;
-                    font-size: 0.9rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.1em;
-                    transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), background 0.3s;
-                    display: inline-block;
-                    border: none;
-                    cursor: pointer;
-                }
-
-                .cta-button:hover {
-                    transform: scale(1.05);
-                    background: #f0f0f0;
-                }
-
-                .glass-card {
-                    background: rgba(10, 10, 10, 0.7);
-                    backdrop-filter: blur(20px) saturate(180%);
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    transition: border-color 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-
-                .glass-card:hover {
-                    border-color: rgba(255, 255, 255, 0.2);
-                    transform: translateY(-5px);
-                }
-
-                .mono-tag {
-                    font-family: var(--font-mono);
-                    font-size: 0.7rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.3em;
-                    color: rgba(255,255,255,0.4);
-                    margin-bottom: 24px;
-                    display: block;
-                }
-
-                /* Bento Visuals */
-                .lecture-bar {
-                    flex: 1;
-                    background: linear-gradient(to top, rgba(255,255,255,0.05), rgba(255,255,255,0.8));
-                    border-top: 1px solid rgba(255,255,255,0.3);
-                    border-radius: 1px;
-                }
-
-                .storage-viz {
-                    position: relative;
-                    width: 240px;
-                    height: 240px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                @keyframes rotate-reverse {
-                    from { transform: rotate(360deg); }
-                    to { transform: rotate(0deg); }
-                }
-
-                @keyframes orbit-rotate {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                .orbit-ring {
-                    position: absolute;
-                    border: 1px dashed rgba(255,255,255,0.1);
-                    border-radius: 50%;
-                }
-
-                .sync-point {
-                    width: 6px; height: 6px;
-                    background: #fff;
-                    border-radius: 50%;
-                    position: absolute;
-                    top: -3px; left: 50%;
-                    box-shadow: 0 0 10px #fff;
-                }
-            `}</style>
-
-            <div className="grid-overlay" />
-
-            <header className="fixed top-0 w-full h-[72px] flex items-center justify-between px-10 z-[100] border-b border-white/5 backdrop-blur-3xl bg-black/60">
-                <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 bg-white rounded-sm" />
-                    <span className="font-extrabold tracking-tighter text-lg uppercase italic">VIDYOS</span>
+            {/* Premium Nav */}
+            <nav className="fixed top-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[1400px] z-[1000] px-10 py-4 bg-white/40 backdrop-blur-[45px] border border-black/5 rounded-full flex justify-between items-center shadow-premium">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                        <span className="text-white font-black text-xl">V</span>
+                    </div>
+                    <div>
+                        <span className="text-sm font-black tracking-widest uppercase">Vidyos</span>
+                        <span className="block text-[8px] font-bold text-[#14b8a6] tracking-[0.4em] uppercase">Fusion OS</span>
+                    </div>
                 </div>
-                <nav className="hidden lg:flex items-center gap-10">
-                    <a href="#lectures" className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Features</a>
-                    <a href="#storage" className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Continuity</a>
-                    <a href="#" className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Network</a>
-                    <button
-                        onClick={onGetStarted}
-                        className="text-[10px] font-bold uppercase tracking-[0.2em] border border-white/20 px-6 py-2.5 rounded-full hover:bg-white hover:text-black transition-all"
-                    >
-                        Log In
+                <div className="flex items-center gap-10">
+                    <div className="hidden md:flex gap-8">
+                        <a href="#lab" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">Neural Lab</a>
+                        <a href="#storage" className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">Continuity</a>
+                    </div>
+                    <button onClick={onGetStarted} className="px-6 py-2.5 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-110 active:scale-95 transition-all">
+                        Initiate Synapse
                     </button>
-                </nav>
-            </header>
+                </div>
+            </nav>
 
             {/* Hero Section */}
-            <div id="hero-canvas" className="fixed inset-0 z-2">
-                <div ref={canvasRef} className="w-full h-full" />
-            </div>
-
-            <section className="hero-section">
-                <div className="hero-content">
-                    <span className="mono-tag reveal">The New Standard of Academic Leverage</span>
-                    <h1 className="reveal">
-                        Cognitive Leverage<br />
-                        <span className="text-white/30 italic">for Modern Learners.</span>
-                    </h1>
-                    <p className="max-w-xl mx-auto text-xl md:text-2xl text-white/50 mb-12 leading-relaxed reveal">
-                        The high-performance companion that transcribes, indexes, and reasons through your entire curriculum in real-time.
-                    </p>
-                    <div className="reveal">
-                        <button onClick={onGetStarted} className="cta-button">Initialize Protocol</button>
+            <section className="relative h-screen flex flex-col justify-center items-center text-center px-6 z-10 pt-20">
+                <span className="f-reveal text-[#14b8a6] text-[11px] font-black uppercase tracking-[0.8em] mb-8">Personal Truth Engine</span>
+                <h1 className="f-reveal text-[6rem] md:text-[9rem] font-black tracking-[-0.06em] leading-[0.85] mb-12 bg-gradient-to-b from-black to-black/40 bg-clip-text text-transparent">
+                    MAP YOUR<br />REALITY.
+                </h1>
+                <p className="f-reveal text-[1.5rem] font-bold text-black/40 max-w-2xl leading-relaxed mb-16">
+                    Not just a tool. A cognitive mirror that grounds AI reasoning in your actual materials—zero hallucination, infinite depth.
+                </p>
+                <div className="f-reveal">
+                    <button onClick={onGetStarted} className="btn-primary" style={{ padding: '24px 60px', fontSize: '1.2rem' }}>
+                        Begin Synthesis
+                    </button>
+                    <div className="mt-8 flex items-center justify-center gap-4 opacity-30">
+                        <div className="w-12 h-px bg-black" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Scroll to Explore Neural Hub</span>
+                        <div className="w-12 h-px bg-black" />
                     </div>
                 </div>
             </section>
 
-            {/* Bento Section */}
-            <section className="relative z-10 px-6 md:px-12 py-32 max-w-[1400px] mx-auto">
-                <div className="grid grid-cols-12 gap-6">
+            {/* Bento Lab */}
+            <section id="lab" className="relative z-10 px-6 md:px-12 py-40 max-w-[1450px] mx-auto grid grid-cols-12 gap-10">
 
-                    {/* Feature 1 */}
-                    <div id="lectures" className="col-span-12 lg:col-span-8 glass-card p-12 rounded-sm scroll-reveal flex flex-col justify-between h-[500px] relative overflow-hidden group">
-                        <div className="relative z-10">
-                            <span className="mono-tag">01 / Neural Architecture</span>
-                            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-6">Hyper-Indexed Lectures</h2>
-                            <p className="text-white/40 max-w-sm text-lg leading-relaxed">
-                                Every spoken word is instantly converted into a searchable, multidimensional knowledge graph.
-                            </p>
-                        </div>
-
-                        <div className="flex items-end gap-1.5 h-48 absolute bottom-0 right-12 left-12 md:left-auto md:w-[60%] pointer-events-none">
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => (
-                                <div key={i} className="lecture-bar" />
-                            ))}
-                        </div>
+                {/* Module 01: Neural Grounding */}
+                <div className="col-span-12 lg:col-span-8 vidyos-card p-16 h-[600px] flex flex-col justify-between group overflow-hidden">
+                    <div className="relative z-10">
+                        <span className="label-caps">Module 01 / Neural Grounding</span>
+                        <h2 className="text-5xl font-black tracking-tighter mb-8 leading-tight">Your PDF + Your Professor<br /><span className="text-[#14b8a6]">Synthesized.</span></h2>
+                        <p className="text-xl font-bold text-black/40 max-w-md leading-relaxed">
+                            Stop asking generic AIs. Ask Vidyos about the specific theory on Slide 44 of Lecture 12. Complete source verification.
+                        </p>
                     </div>
-
-                    {/* Feature 2 */}
-                    <div id="storage" className="col-span-12 lg:col-span-4 glass-card p-12 rounded-sm scroll-reveal h-[500px] flex flex-col items-center text-center">
-                        <div className="mb-auto text-left w-full">
-                            <span className="mono-tag">02 / CONTINUITY</span>
-                            <h2 className="text-3xl font-bold tracking-tight mb-4">Infinite Storage</h2>
-                            <p className="text-white/30">Native Google Drive & Notion sync for your history.</p>
-                        </div>
-
-                        <div className="storage-viz">
-                            <div className="orbit-ring w-[100px] h-[100px]" style={{ animation: 'orbit-rotate 8s linear infinite' }}><div className="sync-point" /></div>
-                            <div className="orbit-ring w-[180px] h-[180px]" style={{ animation: 'rotate-reverse 12s linear infinite' }}><div className="sync-point" /></div>
-                            <div className="orbit-ring w-[240px] h-[240px]" style={{ animation: 'orbit-rotate 20s linear infinite' }}><div className="sync-point" /></div>
-                            <div className="w-16 h-16 bg-white/10 border border-white/20 flex items-center justify-center rotate-45 backdrop-blur-md">
-                                <div className="w-8 h-8 bg-white/20" />
-                            </div>
-                        </div>
+                    <div className="relative h-32 flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-1000">
+                        <div className="w-full h-px bg-gradient-to-r from-transparent via-[#14b8a6] to-transparent" />
+                        <div className="absolute w-20 h-20 border-2 border-[#14b8a6] rounded-full animate-ping" />
                     </div>
-
-                    {/* Feature 3 */}
-                    <div className="col-span-12 lg:col-span-4 glass-card p-12 rounded-sm scroll-reveal h-[400px]">
-                        <span className="mono-tag">03 / Precision</span>
-                        <h2 className="text-3xl font-bold tracking-tight mb-4">Case Study Synthesizer</h2>
-                        <p className="text-white/30">Connect dots between Case Studies from Term 1 and modeling in Term 6 automatically.</p>
-                    </div>
-
-                    {/* Feature 4 */}
-                    <div className="col-span-12 lg:col-span-8 glass-card p-12 rounded-sm scroll-reveal h-[400px] relative overflow-hidden">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <span className="mono-tag">04 / Interface</span>
-                                <h2 className="text-4xl font-bold tracking-tighter mb-4">Skeletal Executive UI</h2>
-                                <p className="text-white/30 max-w-md">Minimalist, distraction-free environment built for high-stakes decision making and deep focus sessions.</p>
-                            </div>
-                            <div className="font-mono text-[9px] text-white/20 text-right leading-relaxed hidden md:block">
-                                ANALYZING_CORE_CURRICULUM... [OK]<br />
-                                MAPPING_EXTERNALITIES... [OK]<br />
-                                GENERATING_FRAMEWORKS... [OK]
-                            </div>
-                        </div>
-                        <div className="mt-12 h-px bg-white/5 w-full relative">
-                            <div className="absolute top-0 left-0 h-full bg-white w-20 animate-pulse shadow-[0_0_15px_#fff]" />
-                        </div>
-                    </div>
-
                 </div>
+
+                {/* Module 02: Cognitive Flow */}
+                <div className="col-span-12 lg:col-span-4 vidyos-card p-12 h-[600px] flex flex-col items-center justify-center text-center">
+                    <span className="label-caps">Retention Metrics</span>
+                    <div className="my-12 relative">
+                        <div className="text-[6rem] font-black text-[#14b8a6] leading-none">94%</div>
+                        <span className="text-[11px] font-black uppercase tracking-widest opacity-40">Deep Retention Level</span>
+                    </div>
+                    <p className="font-bold text-black/40">Bio-feedback transcription ensures your brain stays in high-beta state during synthesis.</p>
+                </div>
+
+                {/* Module 03: Local Sovereignty */}
+                <div className="col-span-12 lg:col-span-4 vidyos-card p-12 h-[450px] bg-black text-white">
+                    <span className="label-caps text-[#14b8a6]">Identity Hub</span>
+                    <h3 className="text-3xl font-black mb-6 mt-4">Local First.<br />Privacy Always.</h3>
+                    <p className="opacity-40 font-bold leading-relaxed">Your data never leaves your infrastructure. Local NPU processing for Hinglish transcription means zero latency and total sovereignty.</p>
+                </div>
+
+                {/* Module 04: The Predictor */}
+                <div className="col-span-12 lg:col-span-8 vidyos-card p-16 h-[450px] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-10">
+                        <Sparkles className="w-16 h-16 text-[#b45309] opacity-20" />
+                    </div>
+                    <span className="label-caps">Module 04 / Examination Engine</span>
+                    <h3 className="text-4xl font-black mb-6 mt-2">The Exam Predictor.</h3>
+                    <p className="text-black/40 font-bold max-w-lg leading-relaxed">Automatically identifies potential examination questions based on lecturer emphasis and syllabus frequency. Study less, learn specifically.</p>
+                    <div className="mt-8 flex gap-3">
+                        <div className="px-5 py-2 rounded-full border border-black/5 text-[10px] font-black uppercase tracking-widest">Auto-Flashcards</div>
+                        <div className="px-5 py-2 rounded-full border border-black/5 text-[10px] font-black uppercase tracking-widest">Emphasis Tracking</div>
+                    </div>
+                </div>
+
             </section>
 
-            <footer className="px-10 py-20 border-t border-white/5 bg-[#050505] flex flex-col md:flex-row justify-between items-center gap-10">
-                <div className="flex items-center gap-3 opacity-40">
-                    <div className="w-4 h-4 bg-white rounded-sm" />
-                    <span className="font-bold tracking-tighter text-sm uppercase">VIDYOS — 2026</span>
-                </div>
-                <div className="flex gap-8">
-                    <a href="/#privacy" className="text-[10px] font-mono tracking-widest text-white/30 hover:text-white transition-colors">PRIVACY_POLICY</a>
-                    <a href="/#terms" className="text-[10px] font-mono tracking-widest text-white/30 hover:text-white transition-colors">TERMS_OF_SERVICE</a>
-                    <a href="#" className="text-[10px] font-mono tracking-widest text-white/30 hover:text-white transition-colors">SOVEREIGN_STATUS</a>
+            {/* Footer */}
+            <footer className="relative bg-white border-t border-black/5 py-40 flex flex-col items-center z-10 px-6">
+                <h2 className="text-[8rem] md:text-[14rem] font-black text-black opacity-[0.03] absolute top-20 pointer-events-none">FUSION</h2>
+                <div className="flex flex-col items-center gap-10">
+                    <div className="w-16 h-16 bg-black rounded-3xl flex items-center justify-center">
+                        <span className="text-white font-black text-3xl">V</span>
+                    </div>
+                    <div className="flex gap-16">
+                        <a href="/#privacy" className="text-[11px] font-black uppercase tracking-[0.4em] opacity-40 hover:opacity-100 transition-opacity">Privacy</a>
+                        <a href="/#terms" className="text-[11px] font-black uppercase tracking-[0.4em] opacity-40 hover:opacity-100 transition-opacity">Terms</a>
+                        <a href="#" className="text-[11px] font-black uppercase tracking-[0.4em] opacity-40 hover:opacity-100 transition-opacity">Contact</a>
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[1em] opacity-20 mt-10">Knowledge, Reimagined • 2026</p>
                 </div>
             </footer>
         </div>

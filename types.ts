@@ -24,6 +24,7 @@ export interface Session {
   groundingFiles?: string[];
   groundingFileDetails?: GroundingFileDetail[];
   aiContext?: string; // User-provided text context
+  volumeBoost?: number;
   notes?: Note[];
 }
 

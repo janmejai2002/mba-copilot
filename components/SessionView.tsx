@@ -37,7 +37,9 @@ const SessionView: React.FC<SessionViewProps> = ({
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>(session.suggestedQuestions || []);
   const [insight, setInsight] = useState<{ summary: string; examQuestions: string[] } | null>(session.summary ? { summary: session.summary, examQuestions: session.examQuestions || [] } : null);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [volumeBoost, setVolumeBoost] = useState(2.0);
+  const [volumeBoost, setVolumeBoost] = useState(session.volumeBoost || 1.0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [skipSilence, setSkipSilence] = useState(false);
   const [lastSaved, setLastSaved] = useState(Date.now());
   const [contextSaved, setContextSaved] = useState(false);
   const [notes, setNotes] = useState<Note[]>(session.notes || []);
@@ -54,6 +56,14 @@ const SessionView: React.FC<SessionViewProps> = ({
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+
+  const volumeBoostRef = useRef(volumeBoost);
+  const isPausedRef = useRef(isPaused);
+  const skipSilenceRef = useRef(skipSilence);
+
+  useEffect(() => { volumeBoostRef.current = volumeBoost; }, [volumeBoost]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+  useEffect(() => { skipSilenceRef.current = skipSilence; }, [skipSilence]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -195,10 +205,23 @@ const SessionView: React.FC<SessionViewProps> = ({
 
         processor.onaudioprocess = (e) => {
           if (socket.readyState !== WebSocket.OPEN) return;
+          if (isPausedRef.current) return; // Don't send data if paused
+
           const inputData = e.inputBuffer.getChannelData(0);
+
+          // Skip silence check
+          if (skipSilenceRef.current) {
+            let sum = 0;
+            for (let i = 0; i < inputData.length; i++) {
+              sum += inputData[i] * inputData[i];
+            }
+            const rms = Math.sqrt(sum / inputData.length);
+            if (rms < 0.01) return; // Threshold for silence
+          }
+
           const pcmData = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
-            const boosted = inputData[i] * volumeBoost;
+            const boosted = inputData[i] * volumeBoostRef.current;
             pcmData[i] = Math.max(-1, Math.min(1, boosted)) * 0x7FFF;
           }
           socket.send(pcmData.buffer);
@@ -226,7 +249,7 @@ const SessionView: React.FC<SessionViewProps> = ({
       console.error("Failed to start session:", err);
       setIsRecording(false);
     }
-  }, [updateTranscription, transcription.length, volumeBoost]);
+  }, [updateTranscription, transcription.length, volumeBoost, isPaused, skipSilence]);
 
   const stopRecording = () => {
     setIsRecording(false);
@@ -319,33 +342,73 @@ const SessionView: React.FC<SessionViewProps> = ({
           ))}
           <div ref={transcriptEndRef} />
         </div>
-        <div className="p-4 border-t border-black/5 flex justify-between items-center bg-white/80">
+        <div className="p-4 border-t border-black/5 flex justify-between items-center bg-white/80 gap-3">
           <AudioVisualizer analyser={analyser} />
-          <button onClick={isRecording ? stopRecording : startRecording} className={`w-10 h-10 rounded-full flex items-center justify-center ${isRecording ? 'bg-red-500' : 'bg-black'}`}>
-            {isRecording ? <div className="w-3 h-3 bg-white rounded-sm" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {isRecording && (
+              <button
+                onClick={() => setIsPaused(!isPaused)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isPaused ? 'bg-orange-500' : 'bg-black/5'}`}
+                title={isPaused ? "Resume" : "Pause"}
+              >
+                <div className={`flex gap-1 ${isPaused ? 'text-white' : 'text-black'}`}>
+                  {isPaused ? <Play className="w-4 h-4" /> : <div className="flex gap-0.5"><div className="w-1 h-3 bg-current" /><div className="w-1 h-3 bg-current" /></div>}
+                </div>
+              </button>
+            )}
+            <button onClick={isRecording ? stopRecording : startRecording} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-red-500' : 'bg-black'}`}>
+              {isRecording ? <div className="w-3 h-3 bg-white rounded-sm" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto pb-12 animate-apple-in px-4">
-      <header className="flex flex-col gap-6 mb-10">
-        <button onClick={handleBack} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-black/30 hover:text-black transition-all w-fit">
-          Back to Library
+    <div className="max-w-[1550px] mx-auto pb-24 animate-apple-in px-6">
+      <header className="flex flex-col gap-8 mb-16 relative">
+        <button onClick={handleBack} className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.4em] text-[var(--vidyos-teal)] hover:opacity-60 transition-all w-fit">
+          <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+          Return to Library
         </button>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div className="flex-1 w-full">
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-black/30 mb-1.5 block">{subject.name}</span>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#1d1d1f] leading-tight">{session.title}</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
+          <div className="flex-1 w-full group">
+            <span className="label-caps mb-3">{subject.name} • Session Active</span>
+            <h2 className="section-title mb-0 pr-10">{session.title}</h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-2 bg-black/[0.03] px-3 py-2 rounded-2xl">
-              <span className="text-[10px] font-bold text-black/60">{volumeBoost}x</span>
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto bg-[var(--glass-heavy)] p-3 rounded-[2.5rem] border border-[var(--glass-border)] backdrop-blur-xl shadow-[var(--shadow-premium)]">
+            <div className="flex items-center gap-2 px-2">
+              <button
+                onClick={() => setVolumeBoost(prev => prev === 2.0 ? 1.0 : 2.0)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${volumeBoost === 2.0 ? 'bg-[var(--vidyos-gold)] text-white' : 'hover:bg-black/5 text-[var(--text-muted)]'}`}
+                title="Audio Amplifier (2x Gain)"
+              >
+                2X
+              </button>
+              <button
+                onClick={() => setSkipSilence(!skipSilence)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${skipSilence ? 'bg-[var(--vidyos-teal)] text-white' : 'hover:bg-black/5 text-[var(--text-muted)]'}`}
+                title="Skip silence automatically"
+              >
+                SIL
+              </button>
             </div>
+
+            <div className="h-8 w-[1px] bg-[var(--glass-border)] mx-1" />
+
+            {isRecording && (
+              <button
+                onClick={() => setIsPaused(!isPaused)}
+                className={`flex items-center gap-3 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${isPaused ? 'bg-orange-500 text-white animate-pulse' : 'bg-black/5 text-[var(--text-main)] hover:bg-black/10'}`}
+              >
+                {isPaused ? <Play className="w-4 h-4" /> : <div className="flex gap-1"><div className="w-1 h-3.5 bg-current" /><div className="w-1 h-3.5 bg-current" /></div>}
+                {isPaused ? 'Resume' : 'Pause'}
+              </button>
+            )}
+
             {isRecording && <AudioVisualizer analyser={analyser} />}
 
             {/* Manual Minimize Button */}
@@ -355,8 +418,8 @@ const SessionView: React.FC<SessionViewProps> = ({
                   setIsMiniMode(true);
                   onBack();
                 }}
-                className="p-2.5 bg-black/[0.03] hover:bg-black/[0.08] text-black/60 rounded-full transition-all"
-                title="Minimize to PIP"
+                className="w-10 h-10 bg-black/5 hover:bg-black text-[var(--text-main)] hover:text-white rounded-full flex items-center justify-center transition-all"
+                title="Minimize Layer"
               >
                 <Maximize2 className="w-4 h-4" />
               </button>
@@ -365,26 +428,26 @@ const SessionView: React.FC<SessionViewProps> = ({
             {isRecording ? (
               <button
                 onClick={stopRecording}
-                className="px-6 py-2.5 bg-red-500 text-white rounded-full font-bold uppercase tracking-widest text-[11px] animate-pulse"
+                className="px-8 py-3 bg-red-500 text-white rounded-full font-black uppercase tracking-widest text-[11px] animate-pulse shadow-xl shadow-red-500/20"
               >
-                Stop Recording
+                End Recording
               </button>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {transcription.length > 0 && !insight && (
                   <button
                     onClick={handleEndClass}
                     disabled={isSummarizing}
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-full font-bold uppercase tracking-widest text-[11px] flex items-center gap-2 disabled:opacity-50"
+                    className="btn-fusion"
                   >
-                    {isSummarizing ? 'Analyzing...' : <> <Sparkles className="w-3.5 h-3.5" /> Generate Summary</>}
+                    {isSummarizing ? 'Synthesizing...' : <> <Sparkles className="w-4 h-4" /> Synthesize insights</>}
                   </button>
                 )}
                 <button
                   onClick={startRecording}
-                  className="px-6 py-2.5 bg-black text-white rounded-full font-bold uppercase tracking-widest text-[11px]"
+                  className="btn-fusion"
                 >
-                  {transcription.length > 0 ? 'Resume Copilot' : 'Start Live Copilot'}
+                  {transcription.length > 0 ? 'Resume Capture' : 'Initiate Capture'}
                 </button>
               </div>
             )}
@@ -392,31 +455,35 @@ const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="lg:col-span-8 space-y-10">
           {isRecording && (
-            <section className="sticky top-4 z-20">
-              <UnifiedInput onSend={handleUnifiedSend} placeholder="Type a note or upload slide..." isLive={true} />
+            <section className="sticky top-28 z-20">
+              <div className="vidyos-card p-3 rounded-[3rem] bg-white/60">
+                <UnifiedInput onSend={handleUnifiedSend} placeholder="Insert neural trigger or upload slide..." isLive={true} />
+              </div>
             </section>
           )}
 
-          <section className="apple-card flex flex-col h-[600px] p-8">
-            <div className="flex justify-between items-center mb-6 border-b border-black/[0.03] pb-4">
-              <div className="flex items-center gap-3">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/30">Live Transcription</h3>
-                <button onClick={() => setTranscriptModalOpen(true)} className="p-1.5 hover:bg-black/5 rounded-lg">
-                  <Maximize2 className="w-3 h-3 text-black/30" />
-                </button>
+          <section className="vidyos-card flex flex-col h-[700px] p-10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--vidyos-teal-light)] rounded-full -mr-32 -mt-32 blur-3xl opacity-30 pointer-events-none" />
+            <div className="flex justify-between items-center mb-8 border-b border-[var(--glass-border)] pb-6">
+              <div className="flex items-center gap-4">
+                <h3 className="label-caps mb-0">Live Transcription Layer</h3>
+                <div className="px-3 py-1 bg-[var(--vidyos-teal-light)] rounded-full text-[9px] font-black text-[var(--vidyos-teal)] uppercase tracking-widest animate-pulse">Syncing</div>
               </div>
+              <button onClick={() => setTranscriptModalOpen(true)} className="w-10 h-10 bg-black/5 hover:bg-black hover:text-white rounded-full flex items-center justify-center transition-all">
+                <Maximize2 className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pr-4">
+            <div className="flex-1 overflow-y-auto space-y-8 custom-scrollbar pr-6">
               {transcription.map((turn, i) => (
-                <div key={i} className={`flex gap-6 ${turn.role === 'system' ? 'opacity-60 italic' : ''}`}>
-                  <div className="min-w-[60px] text-[9px] font-bold text-black/20 pt-1">
+                <div key={i} className={`flex gap-8 group ${turn.role === 'system' ? 'opacity-40 italic' : ''}`}>
+                  <div className="min-w-[70px] text-[10px] font-black text-[var(--text-muted)] pt-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
                     {new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div className={`text-sm leading-relaxed ${turn.text.includes('[NOTE') ? 'text-blue-600 font-bold' : 'text-black/90'}`}>
+                  <div className={`text-md leading-relaxed font-semibold ${turn.text.includes('[NOTE') ? 'text-[var(--vidyos-teal)] border-l-4 border-[var(--vidyos-teal)] pl-6 py-2' : 'text-[var(--text-main)] opacity-90'}`}>
                     {turn.text}
                   </div>
                 </div>
@@ -425,77 +492,93 @@ const SessionView: React.FC<SessionViewProps> = ({
             </div>
           </section>
 
-          <section className="apple-card p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/30">Reference Materials</h3>
-              <label className="cursor-pointer bg-black/5 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-black/10">
+          <section className="vidyos-card p-10">
+            <div className="flex justify-between items-center mb-10">
+              <div>
+                <span className="label-caps">Knowledge Anchor</span>
+                <h3 className="text-2xl font-black text-[var(--text-main)]">Reference Materials</h3>
+              </div>
+              <label className="btn-fusion" style={{ padding: '12px 24px', fontSize: '0.75rem' }}>
                 Bulk Upload
                 <input type="file" multiple className="hidden" onChange={handleFileUpload} />
               </label>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               {(session.groundingFiles || []).map((file, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-4 py-2 bg-black/[0.03] rounded-xl border border-black/[0.01]">
-                  <FileText className="w-3.5 h-3.5 text-black/40" />
-                  <span className="text-[11px] font-bold text-black/60">{file}</span>
+                <div key={i} className="flex items-center gap-3 px-6 py-3 bg-[var(--glass-heavy)] rounded-2xl border border-[var(--glass-border)] hover:border-[var(--vidyos-teal-glow)] transition-all group">
+                  <FileText className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--vidyos-teal)]" />
+                  <span className="text-[12px] font-black text-[var(--text-main)]">{file}</span>
                 </div>
               ))}
               {notes.flatMap(n => n.attachments || []).map((att) => (
-                <div key={att.id} className="flex items-center gap-2.5 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl">
-                  <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-[11px] font-bold text-blue-600">{att.name}</span>
+                <div key={att.id} className="flex items-center gap-3 px-6 py-3 bg-[var(--vidyos-teal-light)] border border-[var(--vidyos-teal-glow)] rounded-2xl">
+                  <ImageIcon className="w-4 h-4 text-[var(--vidyos-teal)]" />
+                  <span className="text-[12px] font-black text-[var(--vidyos-teal)]">{att.name}</span>
                 </div>
               ))}
             </div>
           </section>
         </div>
 
-        <aside className="lg:col-span-4 space-y-8">
-          <QAConsole
-            suggestedQuestions={suggestedQuestions}
-            onAskAI={async (query) => {
-              const context = transcription.slice(-50).map(t => t.text).join(' ');
-              return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
-            }}
-            messages={consoleMessages}
-            onMessagesChange={setConsoleMessages}
-            onExpand={() => setConsoleModalOpen(true)}
-          />
-          <KnowledgeGraph concepts={concepts} />
+        <aside className="lg:col-span-4 space-y-10">
+          <div className="vidyos-card p-2 bg-transparent shadow-none border-none">
+            <QAConsole
+              suggestedQuestions={suggestedQuestions}
+              onAskAI={async (query) => {
+                const context = transcription.slice(-50).map(t => t.text).join(' ');
+                return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+              }}
+              messages={consoleMessages}
+              onMessagesChange={setConsoleMessages}
+              onExpand={() => setConsoleModalOpen(true)}
+            />
+          </div>
+
+          <div className="vidyos-card p-1">
+            <KnowledgeGraph concepts={concepts} />
+          </div>
+
           {insight && (
-            <div className="apple-card p-6 bg-blue-50/50">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-3 text-blue-600/40">Smart Summary</h3>
-              <p className="text-[12px] font-bold text-blue-900/80">{insight.summary}</p>
+            <div className="vidyos-card p-10 bg-[var(--vidyos-teal-light)] border-[var(--vidyos-teal-glow)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4">
+                <Sparkles className="w-8 h-8 text-[var(--vidyos-teal)] opacity-20" />
+              </div>
+              <h3 className="label-caps text-[var(--vidyos-teal)] mb-6">Cognitive Synthesis</h3>
+              <p className="text-[13px] font-black text-[var(--text-main)] leading-relaxed opacity-90">{insight.summary}</p>
             </div>
           )}
         </aside>
       </div>
 
-      <ExpandableModal isOpen={transcriptModalOpen} onClose={() => setTranscriptModalOpen(false)} title="Transcription">
-        <div className="p-6 space-y-4">
+      <ExpandableModal isOpen={transcriptModalOpen} onClose={() => setTranscriptModalOpen(false)} title="Transcription History">
+        <div className="p-10 space-y-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
           {transcription.map((turn, i) => (
-            <div key={i} className="flex gap-4">
-              <span className="text-[9px] font-bold text-black/20 w-12 pt-1">{new Date(turn.timestamp).toLocaleTimeString()}</span>
-              <p className="text-sm">{turn.text}</p>
+            <div key={i} className="flex gap-8 group">
+              <span className="text-[11px] font-black text-[var(--text-muted)] w-20 pt-1.5 opacity-40">{new Date(turn.timestamp).toLocaleTimeString()}</span>
+              <p className="text-md font-bold text-[var(--text-main)] leading-relaxed">{turn.text}</p>
             </div>
           ))}
         </div>
       </ExpandableModal>
 
-      <ExpandableModal isOpen={consoleModalOpen} onClose={() => setConsoleModalOpen(false)} title="Doubt Console">
-        <QAConsole
-          suggestedQuestions={suggestedQuestions}
-          onAskAI={async (query) => {
-            const context = transcription.slice(-100).map(t => t.text).join(' ');
-            return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
-          }}
-          messages={consoleMessages}
-          onMessagesChange={setConsoleMessages}
-        />
+      <ExpandableModal isOpen={consoleModalOpen} onClose={() => setConsoleModalOpen(false)} title="Neural Doubt Resolution">
+        <div className="p-4 h-[80vh]">
+          <QAConsole
+            suggestedQuestions={suggestedQuestions}
+            onAskAI={async (query) => {
+              const context = transcription.slice(-100).map(t => t.text).join(' ');
+              return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+            }}
+            messages={consoleMessages}
+            onMessagesChange={setConsoleMessages}
+          />
+        </div>
       </ExpandableModal>
 
-      <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Knowledge Graph">
-        <KnowledgeGraph concepts={concepts} />
+      <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Knowledge Architecture">
+        <div className="h-[80vh]">
+          <KnowledgeGraph concepts={concepts} />
+        </div>
       </ExpandableModal>
     </div>
   );

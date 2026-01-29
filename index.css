@@ -2,49 +2,56 @@
 @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
 
 :root {
+    /* 2026 Light "Cloud Dancer" Master Palette */
+    --bg-main: #fcfcfd;
+    --bg-soft: #f4f4f5;
+
+    /* Vidyos Brand Colors (Premium Fusion) */
+    --vidyos-teal: #14b8a6;
+    --vidyos-teal-light: rgba(20, 184, 166, 0.08);
+    --vidyos-teal-glow: rgba(20, 184, 166, 0.3);
+
+    --vidyos-gold: #b45309;
+    --vidyos-gold-light: #fef3c7;
+    --vidyos-gold-glow: rgba(180, 83, 9, 0.2);
+
+    --text-main: #09090b;
+    --text-muted: #71717a;
+
+    /* Apple Baseline Design Tokens */
+    --glass-heavy: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(0, 0, 0, 0.05);
+    --glass-blur: blur(40px) saturate(200%);
+    --shadow-premium: 0 12px 48px -12px rgba(0, 0, 0, 0.08);
+
+    --ease-ios: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Original tokens maintained for fallback */
     --apple-gray-50: #fbfbfd;
     --apple-gray-100: #f5f5f7;
     --apple-gray-200: #e8e8ed;
-    --apple-gray-300: #d2d2d7;
-    --apple-gray-400: #86868b;
-    --apple-gray-900: #1d1d1f;
-    --apple-accent: #0071e3;
-    --bg-primary: var(--apple-gray-50);
-    --card-bg: #ffffff;
-    --text-primary: var(--apple-gray-900);
-    --text-secondary: var(--apple-gray-400);
     --border-color: rgba(0, 0, 0, 0.08);
 }
 
 .dark {
-    /* Better dark mode colors with improved contrast */
-    --apple-gray-50: #0a0a0a;
-    --apple-gray-100: #1e1e1e;
-    --apple-gray-200: #2d2d2d;
-    --apple-gray-300: #3a3a3a;
-    --apple-gray-400: #a0a0a0;
-    --apple-gray-900: #f5f5f7;
-    --apple-accent: #0a84ff;
-    --bg-primary: #000000;
-    --card-bg: #1c1c1e;
-    --text-primary: #f5f5f7;
-    --text-secondary: #a0a0a0;
+    --bg-main: #020617;
+    --bg-soft: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass-heavy: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
     --border-color: rgba(255, 255, 255, 0.12);
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
-    letter-spacing: -0.011em;
-    transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-
-    /* Prevent layout shift from scrollbar appearing/disappearing */
+    letter-spacing: -0.015em;
+    transition: background-color 0.8s var(--ease-ios), color 0.8s var(--ease-ios);
     scrollbar-gutter: stable;
     overflow-y: scroll;
-
-    /* Smooth scrolling but prevent auto-scroll jumps */
     scroll-behavior: smooth;
 }
 
@@ -54,43 +61,104 @@ html {
     overflow-y: scroll;
 }
 
-.apple-card {
-    background: var(--card-bg);
-    border-radius: 16px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
+
+.apple-card,
+.vidyos-card {
+    background: var(--glass-heavy);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 32px;
+    padding: 32px;
+    box-shadow: var(--shadow-premium);
+    transition: all 0.6s var(--ease-ios);
 }
 
-.apple-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08);
+.apple-card:hover,
+.vidyos-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    background: rgba(255, 255, 255, 0.7);
+    border-color: var(--vidyos-teal-glow);
+    box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.1);
 }
 
-.dark .apple-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+.dark .apple-card,
+.dark .vidyos-card {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
-.dark .apple-card:hover {
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+.btn-fusion {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--text-main);
+    color: #fff !important;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 100px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.4s var(--ease-ios);
+    box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    outline: none;
 }
 
-.apple-btn-primary {
-    background: var(--text-primary);
-    color: var(--card-bg);
-    border-radius: 980px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 600;
+.btn-fusion:hover {
+    background: var(--vidyos-teal);
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 15px 30px -10px var(--vidyos-teal-glow);
 }
 
-.apple-btn-secondary {
-    background: var(--apple-gray-100);
-    color: var(--text-primary);
-    border-radius: 980px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 500;
+.btn-fusion-gold {
+    background: var(--vidyos-gold);
 }
 
+.btn-fusion-gold:hover {
+    background: #d97706;
+}
+
+.section-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    color: var(--text-main);
+}
+
+.label-caps {
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--vidyos-teal);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.glass-nav {
+    background: var(--glass-heavy);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+}
+
+/* Maintain original KaTeX and markdown styles below */
+.markdown-content {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-main);
+}
+
+/* ... rest of existing styles ... */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }

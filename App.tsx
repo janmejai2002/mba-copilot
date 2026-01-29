@@ -13,6 +13,7 @@ import { storage, setDriveToken } from './services/db';
 import { GoogleUser } from './services/googleDrive';
 import TimetableTest from './components/TimetableTest';
 import TimetableValidator from './components/TimetableValidator';
+import Background3D from './components/Background3D';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<GoogleUser | null>(() => {
@@ -283,41 +284,38 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {view === 'session' && activeSessionId && (
-        <SessionView
-          session={sessions.find(s => s.id === activeSessionId)!}
-          subject={subjects.find(s => s.id === sessions.find(sess => sess.id === activeSessionId)?.subjectId)!}
-          onBack={() => {
-            if (activeSubjectId) {
-              setView('subject_home');
-            } else {
-              setView('dashboard');
-            }
-          }}
-          onUpdateSession={updateSession}
-          isMiniMode={isMiniMode}
-          setIsMiniMode={setIsMiniMode}
-        />
-      )}
-
-      {activeSessionId && isMiniMode && view !== 'session' && (
-        <div className="fixed inset-0 pointer-events-none z-[100]">
-          <div className="pointer-events-auto">
+      {/* Main Persistent Session View (Full or Mini) */}
+      {activeSessionId && (
+        <div className={view === 'session' ? 'block animate-apple-in' : 'fixed inset-0 pointer-events-none z-[100]'}>
+          <div className={view === 'session' ? '' : 'pointer-events-auto'}>
             <SessionView
               session={sessions.find(s => s.id === activeSessionId)!}
               subject={subjects.find(s => s.id === sessions.find(sess => sess.id === activeSessionId)?.subjectId)!}
-              onBack={() => { }}
+              onBack={() => {
+                if (activeSubjectId) {
+                  setView('subject_home');
+                } else {
+                  setView('dashboard');
+                }
+              }}
               onUpdateSession={updateSession}
-              isMiniMode={true}
-              setIsMiniMode={setIsMiniMode}
+              isMiniMode={view !== 'session'}
+              setIsMiniMode={(mini) => {
+                if (mini) {
+                  setView('dashboard'); // Or previous view
+                } else {
+                  setView('session');
+                }
+              }}
               onExpand={() => {
-                setIsMiniMode(false);
                 setView('session');
               }}
             />
           </div>
         </div>
       )}
+
+
     </Layout>
   );
 };

@@ -1,5 +1,5 @@
 {
-  "name": "MBA Copilot",
+  "name": "Vidyos",
   "description": "A premium, monochrome local-first web application for MBA students to record, transcribe, and ground classroom lectures in real-time.",
   "requestFramePermissions": [
     "microphone",

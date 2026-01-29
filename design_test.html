@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vidyos Fusion OS | The Personal Truth Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="design_test.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+    <nav class="nav-bar">
+        <a href="#" class="nav-link">Architecture</a>
+        <a href="#" class="nav-link">Neural Map</a>
+        <a href="#" class="nav-link">Exam Engine</a>
+        <a href="#" class="nav-link btn-synapse">Initiate Synapse</a>
+    </nav>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="bento-grid">
+        <!-- HERO SECTION -->
+        <header class="b-large" style="text-align: center; margin-bottom: 300px; margin-top: 100px;">
+            <div class="vidyos-tagline">Vidyos Fusion OS v4.0</div>
+            <h1 class="hero-title">MAP YOUR <br> REALITY.</h1>
+            <p class="hero-subtitle">
+                The world's first <b>Personal Truth Engine</b>. Vidyos doesn't just record lectures; it maps your entire
+                academic universe against its own source material.
+            </p>
+            <div style="margin-top: 60px;">
+                <button class="btn-primary" style="font-size: 1.2rem; padding: 22px 64px;">Begin Your Synthesis</button>
+            </div>
+        </header>
+
+        <!-- CORE FEATURE: NEURAL GROUNDING -->
+        <section class="b-med vidyos-card">
+            <span class="section-label">01. Neural Grounding</span>
+            <h2
+                style="font-size: 4rem; font-weight: 800; margin-bottom: 24px; letter-spacing: -0.04em; line-height: 1.1;">
+                Books Meet <br> Perception.</h2>
+            <p style="color: var(--text-muted); font-size: 1.4rem; line-height: 1.8; margin-bottom: 48px;">
+                Stop asking generic AI for help. Vidyos syncs your <b>actual textbooks</b> and <b>handwritten notes</b>
+                to every spoken word in the classroom. If the professor mentions a theorem, we pull the exact page from
+                your PDF.
+            </p>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                <div class="concept-tag">PDF Integration</div>
+                <div class="concept-tag">Source Verified</div>
+                <div class="concept-tag">Zero Hallucination</div>
+            </div>
+        </section>
+
+        <!-- CORE FEATURE: PERFORMANCE -->
+        <section class="b-side vidyos-card"
+            style="background: var(--vidyos-teal-light); border-color: var(--vidyos-teal);">
+            <span class="section-label" style="color: var(--vidyos-teal);">02. Cognitive Flow</span>
+            <div
+                style="font-size: 6rem; font-weight: 950; color: var(--vidyos-teal); margin-bottom: 12px; letter-spacing: -0.05em;">
+                94%</div>
+            <p style="font-weight: 800; color: var(--vidyos-teal); font-size: 1.2rem; margin-bottom: 40px;">Deep
+                Retention Level Detected</p>
+
+            <div class="progress-container">
+                <div class="progress-fill" style="width: 94%;"></div>
+            </div>
+
+            <p
+                style="color: var(--vidyos-teal); opacity: 0.7; font-size: 1rem; font-weight: 600; line-height: 1.5; margin-top: 40px;">
+                Our Bio-Feedback algorithm monitors your live interaction with notes and predicts exam readiness based
+                on semantic coverage.
+            </p>
+        </section>
+
+        <!-- STORY SECTION: THE MBA JOURNEY -->
+        <section class="b-square vidyos-card">
+            <span class="section-label">03. Real-time Synthesis</span>
+            <h3 style="font-size: 2rem; font-weight: 800; margin-bottom: 20px;">Hinglish Mastery</h3>
+            <p style="color: var(--text-muted); line-height: 1.8;">
+                Transitions between English and Hindi are handled locally. No lag, no server round-trips. Just pure
+                context.
+            </p>
+        </section>
+
+        <section class="b-square vidyos-card"
+            style="background: var(--vidyos-gold-light); border-color: rgba(180, 83, 9, 0.2);">
+            <span class="section-label" style="color: var(--vidyos-gold);">04. Exam Prep</span>
+            <h3 style="font-size: 2rem; font-weight: 800; color: var(--vidyos-gold); margin-bottom: 20px;">The Predictor
+            </h3>
+            <p style="color: var(--vidyos-gold); opacity: 0.8; line-height: 1.8;">
+                AI-generated flashcards from your specific lecture moments. If it wasn't said in class, it's not on the
+                card.
+            </p>
+        </section>
+
+        <section class="b-square vidyos-card">
+            <span class="section-label">05. Intelligence</span>
+            <h3 style="font-size: 2rem; font-weight: 800; margin-bottom: 20px;">Local Trust</h3>
+            <p style="color: var(--text-muted); line-height: 1.8;">
+                Your knowledge, your machine. Everything is processed locally for 100% data sovereignty.
+            </p>
+        </section>
+
+        <!-- FOOTER TRANSITION -->
+        <footer class="b-large"
+            style="text-align: center; margin-top: 200px; padding: 120px 0; border-top: 1px solid var(--glass-border);">
+            <div class="vidyos-tagline">Vidyos Fusion OS &bull; 2026</div>
+            <h2 style="font-size: 4rem; font-weight: 900; margin-bottom: 60px;">KNOWLEDGE, <br> REIMAGINED.</h2>
+            <div style="display: flex; justify-content: center; gap: 24px;">
+                <button class="btn-primary" style="padding: 20px 48px;">Download Core</button>
+                <button class="btn-primary"
+                    style="background: transparent; border: 2px solid var(--text-main); color: var(--text-main); padding: 20px 48px;">Explore
+                    Methodology</button>
+            </div>
+            <div
+                style="margin-top: 100px; font-weight: 900; letter-spacing: 0.5em; opacity: 0.1; font-size: 10rem; pointer-events: none; overflow: hidden; white-space: nowrap;">
+                FUSION FUSION FUSION FUSION FUSION
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- 2026 KNOWLEDGE ARCHITECTURE ENGINE (AWARD WINNING) ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#bg-canvas'),
+            alpha: true,
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.position.setZ(80);
+
+        // --- Custom Particle/Nebula Engine ---
+        const pointsGeometry = new THREE.BufferGeometry();
+        const pointsCount = 4000;
+        const positions = new Float32Array(pointsCount * 3);
+        const colors = new Float32Array(pointsCount * 3);
+
+        for (let i = 0; i < pointsCount * 3; i += 3) {
+            positions[i] = THREE.MathUtils.randFloatSpread(400);
+            positions[i + 1] = THREE.MathUtils.randFloatSpread(400);
+            positions[i + 2] = THREE.MathUtils.randFloatSpread(400);
+
+            const mixedColor = Math.random() > 0.5 ? new THREE.Color(0x14b8a6) : new THREE.Color(0xfbbf24);
+            colors[i] = mixedColor.r;
+            colors[i + 1] = mixedColor.g;
+            colors[i + 2] = mixedColor.b;
+        }
+
+        pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        pointsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        const pointsMaterial = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true, opacity: 0.4 });
+        const pointsMesh = new THREE.Points(pointsGeometry, pointsMaterial);
+        scene.add(pointsMesh);
+
+        // --- SACRED GEOMETRY CENTERPIECE ---
+        const centerpieceGroup = new THREE.Group();
+        const geoMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, wireframe: true, transparent: true, opacity: 0.15 });
+        const mesh1 = new THREE.Mesh(new THREE.IcosahedronGeometry(20, 1), geoMat);
+        const mesh2 = new THREE.Mesh(new THREE.TorusKnotGeometry(16, 0.6, 150, 20), geoMat);
+        centerpieceGroup.add(mesh1, mesh2);
+        scene.add(centerpieceGroup);
+
+        // --- HOLOGRAPHIC GRID FLOORS ---
+        function createGrid(y, color) {
+            const grid = new THREE.GridHelper(800, 60, color, color);
+            grid.position.y = y;
+            grid.material.transparent = true;
+            grid.material.opacity = 0.05;
+            scene.add(grid);
+        }
+        createGrid(-100, 0x14b8a6);
+        createGrid(100, 0xfbbf24);
+
+        // --- LIGHTING ---
+        const p1 = new THREE.PointLight(0xffffff, 1.5); p1.position.set(50, 50, 50);
+        const p2 = new THREE.PointLight(0xfbbf24, 0.8); p2.position.set(-50, -50, 20);
+        scene.add(p1, p2, new THREE.AmbientLight(0xffffff, 0.7));
+
+        // --- INTERACTION ---
+        let mx = 0, my = 0, tX = 0, tY = 0, sY = 0;
+        window.addEventListener('mousemove', (e) => {
+            tX = (e.clientX / window.innerWidth) - 0.5;
+            tY = (e.clientY / window.innerHeight) - 0.5;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+
+            // Kinetic Fluidity (Award-Winning Smoothness)
+            mx += (tX - mx) * 0.04;
+            my += (tY - my) * 0.04;
+
+            centerpieceGroup.rotation.y += 0.0015;
+            centerpieceGroup.rotation.z += 0.0008;
+            centerpieceGroup.position.y = Math.sin(time) * 4;
+
+            pointsMesh.rotation.y += 0.0003;
+            pointsMesh.rotation.z += 0.0001;
+
+            // Scroll Physics
+            const curS = window.scrollY;
+            sY += (curS - sY) * 0.08;
+
+            camera.position.z = 80 + sY * -0.012;
+            camera.position.x = mx * 35;
+            camera.position.y = -my * 35;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
