@@ -1,6 +1,7 @@
 
 export interface Subject {
   id: string;
+  userId?: string;
   name: string;
   description: string;
   createdAt: number;
@@ -8,6 +9,7 @@ export interface Subject {
 
 export interface Session {
   id: string;
+  userId?: string;
   subjectId: string;
   title: string;
   date: number;

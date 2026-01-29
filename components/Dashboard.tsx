@@ -8,9 +8,10 @@ interface DashboardProps {
   onCreateSubject: (name: string, description: string) => void;
   onStartSession: (subjectId: string, title: string) => void;
   onOpenSession: (id: string) => void;
+  onOpenSubject: (id: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ subjects, sessions, onCreateSubject, onStartSession, onOpenSession }) => {
+const Dashboard: React.FC<DashboardProps> = ({ subjects, sessions, onCreateSubject, onStartSession, onOpenSession, onOpenSubject }) => {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectDesc, setNewSubjectDesc] = useState('');
@@ -37,17 +38,32 @@ const Dashboard: React.FC<DashboardProps> = ({ subjects, sessions, onCreateSubje
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {subjects.map(subject => (
-            <div key={subject.id} className="apple-card p-6 md:p-8 flex flex-col justify-between h-56 md:h-64">
+            <div
+              key={subject.id}
+              onClick={() => onOpenSubject(subject.id)}
+              className="apple-card p-6 md:p-8 flex flex-col justify-between h-56 md:h-64 cursor-pointer group hover:bg-black/[0.01]"
+            >
               <div>
-                <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 tracking-tight text-[#1d1d1f]">{subject.name}</h3>
+                <div className="flex justify-between items-start mb-2 md:mb-3">
+                  <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#1d1d1f] group-hover:text-blue-600 transition-colors">{subject.name}</h3>
+                  <div className="w-8 h-8 rounded-full bg-black/[0.03] flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </div>
+                </div>
                 <p className="text-xs md:text-sm text-black/50 leading-relaxed line-clamp-2 md:line-clamp-3 font-medium">{subject.description}</p>
               </div>
-              <button
-                onClick={() => { setSelectedSubjectId(subject.id); setShowSessionModal(true); }}
-                className="w-full py-2.5 md:py-3 apple-btn-secondary hover:bg-black hover:text-white text-[10px] md:text-xs font-bold uppercase tracking-widest"
-              >
-                New Session
-              </button>
+
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-[10px] font-bold text-black/30 uppercase tracking-widest">
+                  {sessions.filter(s => s.subjectId === subject.id).length} Recordings
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedSubjectId(subject.id); setShowSessionModal(true); }}
+                  className="px-4 py-2 bg-black text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black/80 active:scale-90 transition-all opacity-0 group-hover:opacity-100"
+                >
+                  Start New
+                </button>
+              </div>
             </div>
           ))}
           {subjects.length === 0 && (
