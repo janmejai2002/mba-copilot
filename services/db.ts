@@ -66,6 +66,15 @@ export const storage = {
         await db.subjects.put(subject);
         syncToDrive();
     },
+    async deleteSubject(id: string) {
+        await db.subjects.delete(id);
+        await db.sessions.where('subjectId').equals(id).delete();
+        syncToDrive();
+    },
+    async clearAllSubjects() {
+        await db.subjects.clear();
+        syncToDrive();
+    },
     async saveSession(session: Session) {
         await db.sessions.put(session);
         syncToDrive();

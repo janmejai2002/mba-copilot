@@ -6,10 +6,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { prompt } = req.body;
-    const apiKey = process.env.PERPLEXITY_API_KEY;
+    const customKey = req.headers['x-custom-perplexity-key'] as string;
+    const apiKey = customKey || process.env.PERPLEXITY_API_KEY;
 
     if (!apiKey) {
-        return res.status(500).json({ error: 'Perplexity API key not configured on server' });
+        return res.status(500).json({ error: 'Perplexity API key not configured. Please provide one in Settings.' });
     }
 
     try {

@@ -10,7 +10,8 @@ export const callPerplexity = async (prompt: string) => {
     const response = await fetch('/api/perplexity', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-custom-perplexity-key': localStorage.getItem('custom_perplexity_key') || ''
         },
         body: JSON.stringify({ prompt })
     });

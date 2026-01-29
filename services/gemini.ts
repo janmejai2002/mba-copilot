@@ -5,7 +5,8 @@ const callGeminiProxy = async (model: string, contents: string, config?: any) =>
   const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Custom-Gemini-Key': localStorage.getItem('custom_gemini_key') || ''
     },
     body: JSON.stringify({ model, contents, config })
   });

@@ -1,44 +1,63 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const apiKey = process.env.DEEPGRAM_API_KEY;
+    const customKey = req.headers['x-custom-deepgram-key'] as string;
+    const apiKey = customKey || process.env.DEEPGRAM_API_KEY;
+
+    if (customKey) {
+        // If a custom key is provided, we can return it directly (or a session token if we wanted more complexity)
+        // Since Deepgram keys can be used directly in the browser via headers/ws, we return it.
+        return res.status(200).json({ token: customKey });
+    }
 
     if (!apiKey) {
-        return res.status(500).json({ error: 'Deepgram API key not configured on server' });
+        return res.status(500).json({
+            error: 'Deepgram API key not found in server environment (DEEPGRAM_API_KEY). Please check Vercel settings or provide one in the app Settings modal.'
+        });
     }
 
     try {
-        // Call Deepgram to get a temporary project key/token
-        // Actually, Deepgram has a simpler way: just return the key if you trust the friends,
-        // OR use the Deepgram SDK to create a short-lived key.
-
-        // For now, let's just use the simplest "secure-ish" way which is proxying the key request
-        // But Deepgram doesn't have a simple "get-token" endpoint that doesn't require the master key.
-        // The real way is to use the Deepgram SDK's `manage` API to create a key with a short TTL.
-
+        // Attempt to create a short-lived temporary key (Best Practice)
         const response = await fetch('https://api.deepgram.com/v1/projects', {
-            headers: { 'Authorization': `Token ${apiKey}` }
-        });
-        const projects = await response.json();
-        const projectId = projects.projects[0].project_id;
-
-        const keyResponse = await fetch(`https://api.deepgram.com/v1/projects/${projectId}/keys`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Token ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                comment: 'Temporary session key',
-                scopes: ['usage:write'],
-                time_to_live_in_seconds: 3600 // 1 hour
-            })
+            headers: { 'Authorization': `Token ${apiKey}` },
+            signal: AbortSignal.timeout(5000)
         });
 
-        const keyData = await keyResponse.json();
-        return res.status(200).json({ token: keyData.key });
+        if (!response.ok) throw new Error('Failed to fetch projects');
+
+        const data = await response.json();
+        const projectId = data.projects?.[0]?.project_id;
+
+        if (projectId) {
+            const keyResponse = await fetch(`https://api.deepgram.com/v1/projects/${projectId}/keys`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Token ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    comment: 'Temporary session key',
+                    scopes: ['usage:write'],
+                    time_to_live_in_seconds: 3600
+                })
+            });
+
+            if (keyResponse.ok) {
+                const keyData = await keyResponse.json();
+                if (keyData.key) {
+                    return res.status(200).json({ token: keyData.key });
+                }
+            }
+        }
+
+        // Fallback: If project-based key creation fails (e.g. insufficient permissions),
+        // return the master key directly.
+        console.warn('Falling back to master Deepgram key');
+        return res.status(200).json({ token: apiKey });
+
     } catch (error) {
-        console.error('Deepgram Token Error:', error);
-        return res.status(500).json({ error: 'Failed to generate Deepgram token' });
+        console.error('Deepgram API Error, falling back to master key:', error);
+        // Final fallback to the key itself
+        return res.status(200).json({ token: apiKey });
     }
 }

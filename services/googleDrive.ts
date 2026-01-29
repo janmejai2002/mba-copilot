@@ -8,6 +8,7 @@ export interface GoogleUser {
     name: string;
     picture: string;
     accessToken: string;
+    expiresAt: number;
 }
 
 export const googleDrive = {
@@ -56,6 +57,16 @@ export const googleDrive = {
                 headers: { Authorization: `Bearer ${accessToken}` },
                 body: formData
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                if ((response.status === 403 || response.status === 404) && existingFileId) {
+                    console.warn(`File ${existingFileId} inaccessible (status ${response.status}). Retrying as new file...`);
+                    // Remove the invalid ID and try again as a new file
+                    return this.saveToAppData(accessToken, fileName, content);
+                }
+                throw new Error(errorData.error?.message || 'Drive API Error');
+            }
 
             return await response.json();
         } catch (error) {

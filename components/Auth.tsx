@@ -26,7 +26,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
                     email: userData.email,
                     name: userData.name,
                     picture: userData.picture,
-                    accessToken: tokenResponse.access_token
+                    accessToken: tokenResponse.access_token,
+                    expiresAt: Date.now() + 3600 * 1000 // 1 hour expiration
                 };
 
                 onAuthComplete(googleUser);

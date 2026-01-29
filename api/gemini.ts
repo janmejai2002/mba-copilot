@@ -7,10 +7,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { model, contents, config } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const customKey = req.headers['x-custom-gemini-key'] as string;
+    const apiKey = customKey || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-        return res.status(500).json({ error: 'Gemini API key not configured on server' });
+        return res.status(500).json({ error: 'Gemini API key not configured. Please provide one in Settings.' });
     }
 
     try {

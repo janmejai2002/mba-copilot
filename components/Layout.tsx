@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Sun, Moon, LogOut, User } from 'lucide-react';
+import { Sun, Moon, LogOut, User, Settings } from 'lucide-react';
+import SettingsModal from './SettingsModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,9 +12,12 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, darkMode, onToggleDarkMode, userEmail, onLogout }) => {
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] selection:bg-[var(--text-primary)] selection:text-[var(--card-bg)] transition-colors duration-500">
       <nav className="fixed top-0 w-full z-50 px-4 md:px-8 py-3 flex justify-between items-center border-b border-black/5 bg-white/90 backdrop-blur-xl transition-all">
+        {/* ... existing header ... */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[var(--text-primary)] rounded-xl flex items-center justify-center transition-colors">
             <span className="text-[var(--card-bg)] font-bold text-[10px]">MBA</span>
@@ -36,6 +40,14 @@ const Layout: React.FC<LayoutProps> = ({ children, darkMode, onToggleDarkMode, u
           )}
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="w-8 h-8 rounded-full bg-black/[0.03] flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-black/40"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
             <button
               onClick={onToggleDarkMode}
               className="w-8 h-8 rounded-full bg-black/[0.03] flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-[var(--text-primary)]"
@@ -80,6 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkMode, onToggleDarkMode, u
           </p>
         </div>
       </footer>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 };

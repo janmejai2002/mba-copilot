@@ -135,13 +135,14 @@ const SessionView: React.FC<SessionViewProps> = ({
 
       if (!token) {
         try {
-          const tokenResponse = await fetch('/api/deepgram-token');
-          if (tokenResponse.ok) {
-            const contentType = tokenResponse.headers.get("content-type");
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-              const data = await tokenResponse.json();
-              token = data.token;
+          const tokenResponse = await fetch('/api/deepgram-token', {
+            headers: {
+              'x-custom-deepgram-key': localStorage.getItem('custom_deepgram_key') || ''
             }
+          });
+          if (tokenResponse.ok) {
+            const data = await tokenResponse.json();
+            token = data.token;
           }
         } catch (e) {
           console.warn("API Token fetch failed, checking local env...");

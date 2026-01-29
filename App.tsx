@@ -38,6 +38,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      if (Date.now() > user.expiresAt) {
+        handleLogout();
+        return;
+      }
       setDriveToken(user.accessToken);
       initDB();
     } else {
@@ -99,6 +103,19 @@ const App: React.FC = () => {
     };
     await storage.saveSubject(newSubject);
     setSubjects([...subjects, newSubject]);
+  };
+
+  const deleteSubject = async (id: string) => {
+    await storage.deleteSubject(id);
+    setSubjects(prev => prev.filter(s => s.id !== id));
+    setSessions(prev => prev.filter(s => s.subjectId !== id));
+  };
+
+  const clearAllSubjects = async () => {
+    if (!confirm("Permanently wipe all subjects? This will NOT delete recordings, but they will be orphaned.")) return;
+    await storage.clearAllSubjects();
+    setSubjects([]);
+    setSessions([]);
   };
 
   const startSession = async (subjectId: string, title: string) => {
@@ -185,6 +202,8 @@ const App: React.FC = () => {
             setActiveSubjectId(id);
             setView('subject_home');
           }}
+          onDeleteSubject={deleteSubject}
+          onClearAllSubjects={clearAllSubjects}
         />
       )}
 

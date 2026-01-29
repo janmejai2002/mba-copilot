@@ -97,7 +97,14 @@ export async function syncTimetable() {
                 if (content && content.includes('[') && content.length > 3) {
                     const parts = content.split('\n').map(p => p.trim());
                     const subjectPart = parts[0] || "";
-                    const subjectCode = subjectPart.split('[')[0]?.trim() || "Unknown";
+                    let subjectCode = subjectPart.split('[')[0]?.trim() || "Unknown";
+
+                    // Clean up potential stray quotes from CSV splitting
+                    subjectCode = subjectCode.replace(/^["']+|["']+$/g, '').trim();
+
+                    // Filter out date-like strings that might have a [ in them (unlikely but possible if formatting is weird)
+                    const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(subjectCode);
+                    if (isDatePattern || subjectCode.length < 2) return;
 
                     // Extract Session/Section
                     const sessionMatch = content.match(/\[(\d+)\]/);
@@ -107,10 +114,12 @@ export async function syncTimetable() {
 
                     const lookup = courseLookup[subjectCode];
                     const subjectName = lookup ? lookup.name : subjectCode;
-                    let faculty = lookup ? lookup.faculty : parts[1]?.replace(/[\[\]]/g, '');
-                    if (!faculty || faculty === "Unknown") faculty = parts[1]?.replace(/[\[\]]/g, '') || "Unknown";
+                    let faculty = lookup ? lookup.faculty : (parts[1] || "").replace(/[\[\]"']/g, '').trim();
+                    if (!faculty || faculty === "Unknown") faculty = (parts[1] || "").replace(/[\[\]"']/g, '').trim() || "Unknown";
 
-                    subjectsFound.set(subjectName, faculty);
+                    if (subjectName && subjectName !== "Unknown" && !isDatePattern) {
+                        subjectsFound.set(subjectName, faculty);
+                    }
 
                     // Parse Date for timestamp
                     // Format: "Jan 13, 2026 Tuesday" -> "Jan 13, 2026"
@@ -169,11 +178,13 @@ export async function applyTimetableSync(userId: string) {
 
     // 2. Create Sessions for the next 14 days if they don't exist
     const now = Date.now();
+    const pastLimit = now - (3 * 60 * 60 * 1000); // Include classes that started in the last 3 hours
     const futureLimit = now + (14 * 24 * 60 * 60 * 1000);
 
     for (const sessionData of data.sessionsToCreate) {
-        if (sessionData.date > now && sessionData.date < futureLimit) {
-            const subject = currentSubjects.find(s => s.name === sessionData.subjectId);
+        if (sessionData.date > pastLimit && sessionData.date < futureLimit) {
+            const cleanSubId = sessionData.subjectId.replace(/^["']+|["']+$/g, '').trim();
+            const subject = currentSubjects.find(s => s.name === cleanSubId);
             if (subject) {
                 const exists = existingSessions.find(s =>
                     s.subjectId === subject.id &&
