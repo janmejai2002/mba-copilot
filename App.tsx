@@ -150,6 +150,27 @@ const App: React.FC = () => {
     setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
   };
 
+  const createScheduledSessions = async (subjectId: string, dates: Date[]) => {
+    const { format } = await import('date-fns');
+    const newSessions: Session[] = dates.map(date => ({
+      id: crypto.randomUUID(),
+      userId: user?.id,
+      subjectId,
+      title: format(date, 'MMM dd, yyyy'),
+      date: date.getTime(),
+      transcript: '',
+      turns: [],
+      groundingFiles: [],
+      groundingFileDetails: []
+    }));
+
+    for (const session of newSessions) {
+      await storage.saveSession(session);
+    }
+
+    setSessions([...sessions, ...newSessions]);
+  };
+
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
 
   if (hash === '#privacy') {
@@ -213,6 +234,9 @@ const App: React.FC = () => {
           }}
           onStartNewSession={() => {
             setShowNewSessionModal(true);
+          }}
+          onCreateScheduledSessions={(dates) => {
+            createScheduledSessions(activeSubjectId, dates);
           }}
         />
       )}

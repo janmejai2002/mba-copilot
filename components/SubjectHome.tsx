@@ -5,6 +5,7 @@ import { Play, Calendar, FileText, ChevronRight, Clock, Plus, BarChart3, Search,
 import { format } from 'date-fns';
 import UnifiedInput from './UnifiedInput';
 import SubjectGraph from './SubjectGraph';
+import ClassScheduler from './ClassScheduler';
 
 interface SubjectHomeProps {
     subject: Subject;
@@ -12,10 +13,12 @@ interface SubjectHomeProps {
     onBack: () => void;
     onOpenSession: (id: string, mode?: 'view' | 'live') => void;
     onStartNewSession: () => void;
+    onCreateScheduledSessions: (dates: Date[]) => void;
 }
 
-const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, onOpenSession, onStartNewSession }) => {
+const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, onOpenSession, onStartNewSession, onCreateScheduledSessions }) => {
     const [view, setView] = useState<'dashboard' | 'graph'>('dashboard');
+    const [showScheduler, setShowScheduler] = useState(false);
     const sortedSessions = [...sessions].sort((a, b) => b.date - a.date);
     const pendingNotes = sessions.flatMap(s => (s.notes || []).filter(n => n.status === 'pending'));
 
@@ -71,9 +74,16 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
                             <Mic className="w-4 h-4" />
                             Attend Live
                         </button>
+                        <button
+                            onClick={() => setShowScheduler(true)}
+                            className="flex items-center gap-2 px-6 py-4 bg-blue-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-600 active:scale-95 transition-all"
+                        >
+                            <Calendar className="w-4 h-4" />
+                            Schedule
+                        </button>
                         <button className="flex items-center gap-2 px-6 py-4 bg-white border border-black/[0.05] text-black rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-black/[0.02] active:scale-95 transition-all">
                             <UploadCloud className="w-4 h-4" />
-                            Import Recording
+                            Import
                         </button>
                     </div>
                 </div>
@@ -178,7 +188,7 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1.5">
                                                 <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${note.type === 'todo' ? 'bg-red-50 text-red-500' :
-                                                        note.type === 'question' ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'
+                                                    note.type === 'question' ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'
                                                     }`}>
                                                     {note.type}
                                                 </span>
@@ -220,6 +230,17 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
 
                 </div>
             </div>
+
+            {/* Class Scheduler Modal */}
+            {showScheduler && (
+                <ClassScheduler
+                    onSchedule={(dates) => {
+                        onCreateScheduledSessions(dates);
+                        setShowScheduler(false);
+                    }}
+                    onClose={() => setShowScheduler(false)}
+                />
+            )}
         </div>
     );
 };
