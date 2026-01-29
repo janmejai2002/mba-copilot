@@ -7,7 +7,7 @@ interface AudioVisualizerProps {
 
 const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!analyser || !canvasRef.current) return;
@@ -16,117 +16,82 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser }) => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set canvas size
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = 120 * dpr;
-        canvas.height = 40 * dpr;
+        const width = 140;
+        const height = 40;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
 
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
-        let phase = 0;
-
         const draw = () => {
             analyser.getByteFrequencyData(dataArray);
 
-            // Clear with fade effect
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fillRect(0, 0, 120, 40);
+            ctx.clearRect(0, 0, width, height);
 
-            // Calculate average volume
-            const average = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
-            const normalizedAverage = average / 255;
+            // Skeletal Design: Thin lines, subtle glows, high precision
+            const barCount = 40;
+            const barWidth = width / barCount;
+            const centerY = height / 2;
 
-            // Draw 3D wave bars
-            const barCount = 24;
-            const barWidth = 120 / barCount;
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
 
             for (let i = 0; i < barCount; i++) {
-                const dataIndex = Math.floor((i / barCount) * bufferLength);
+                const dataIndex = Math.floor((i / barCount) * (bufferLength / 2));
                 const value = dataArray[dataIndex] / 255;
+                const barHeight = Math.max(2, value * height * 0.8);
 
-                // Create wave effect
-                const waveOffset = Math.sin(phase + i * 0.3) * 0.2;
-                const height = (value + waveOffset) * 30;
+                // Alternating dot and line pattern for "skeletal" technical look
+                const x = i * barWidth + barWidth / 2;
 
-                // 3D perspective effect
-                const x = i * barWidth;
-                const perspective = 1 - (i / barCount) * 0.3;
-                const scaledHeight = height * perspective;
+                // Draw bar logic
+                const opacity = 0.1 + value * 0.9;
+                ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
 
-                // Gradient based on intensity
-                const gradient = ctx.createLinearGradient(x, 40 - scaledHeight, x, 40);
-                const hue = 220 + (value * 60); // Blue to cyan
-                gradient.addColorStop(0, `hsla(${hue}, 70%, 50%, 0.9)`);
-                gradient.addColorStop(1, `hsla(${hue}, 70%, 30%, 0.6)`);
-
-                ctx.fillStyle = gradient;
-
-                // Draw bar with rounded top
                 ctx.beginPath();
-                ctx.roundRect(x + 1, 40 - scaledHeight, barWidth - 2, scaledHeight, [2, 2, 0, 0]);
-                ctx.fill();
+                ctx.moveTo(x, centerY - barHeight / 2);
+                ctx.lineTo(x, centerY + barHeight / 2);
+                ctx.stroke();
 
-                // Add glow effect for high values
-                if (value > 0.6) {
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = `hsla(${hue}, 70%, 50%, ${value})`;
+                // Add a tiny "technical" dot at the ends for high intensity
+                if (value > 0.5) {
+                    ctx.fillStyle = `rgba(59, 130, 246, ${value * 0.5})`;
+                    ctx.beginPath();
+                    ctx.arc(x, centerY - barHeight / 2, 1, 0, Math.PI * 2);
+                    ctx.arc(x, centerY + barHeight / 2, 1, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.shadowBlur = 0;
                 }
             }
 
-            // Draw waveform overlay
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.lineWidth = 1.5;
+            // Draw a very thin core reference line
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
-
-            for (let i = 0; i < 120; i++) {
-                const dataIndex = Math.floor((i / 120) * bufferLength);
-                const value = dataArray[dataIndex] / 255;
-                const y = 20 - (value * 15) + Math.sin(phase + i * 0.1) * 3;
-
-                if (i === 0) {
-                    ctx.moveTo(i, y);
-                } else {
-                    ctx.lineTo(i, y);
-                }
-            }
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(width, centerY);
             ctx.stroke();
 
-            // Pulse circle in center
-            const pulseSize = 3 + normalizedAverage * 5;
-            const pulseGradient = ctx.createRadialGradient(60, 20, 0, 60, 20, pulseSize);
-            pulseGradient.addColorStop(0, `rgba(59, 130, 246, ${normalizedAverage})`);
-            pulseGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-
-            ctx.fillStyle = pulseGradient;
-            ctx.beginPath();
-            ctx.arc(60, 20, pulseSize, 0, Math.PI * 2);
-            ctx.fill();
-
-            phase += 0.05;
             animationRef.current = requestAnimationFrame(draw);
         };
 
         draw();
 
         return () => {
-            if (animationRef.current) {
+            if (animationRef.current !== null) {
                 cancelAnimationFrame(animationRef.current);
             }
         };
     }, [analyser]);
 
     return (
-        <div className="relative">
+        <div className="flex items-center px-4 py-2 bg-black/[0.02] rounded-2xl border border-black/[0.03]">
             <canvas
                 ref={canvasRef}
-                className="rounded-xl shadow-inner bg-gradient-to-br from-white to-gray-50 border border-black/5"
-                style={{ width: '120px', height: '40px' }}
+                style={{ width: '140px', height: '40px' }}
             />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
         </div>
     );
 };

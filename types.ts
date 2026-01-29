@@ -22,6 +22,7 @@ export interface Session {
   groundingFiles?: string[];
   groundingFileDetails?: GroundingFileDetail[];
   aiContext?: string; // User-provided text context
+  notes?: Note[];
 }
 
 export interface GroundingFileDetail {
@@ -36,4 +37,29 @@ export interface TranscriptionTurn {
   role: 'user' | 'model' | 'system';
   text: string;
   timestamp: number;
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  type: 'image' | 'file';
+  url: string; // Base64 or Blob URL
+  size: number;
+}
+
+export interface Note {
+  id: string;
+  sessionId: string;
+  timestamp: number; // Linked to recording time
+  content: string;
+  attachments?: Attachment[];
+  type: 'insight' | 'question' | 'todo';
+  status: 'pending' | 'committed';
+}
+
+export interface SubjectKnowledgeBase {
+  subjectId: string;
+  totalHours: number;
+  keyThemes: string[];
+  aggregatedNotes: Note[];
 }
