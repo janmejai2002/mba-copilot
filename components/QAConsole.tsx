@@ -14,6 +14,8 @@ import 'katex/dist/katex.min.css';
 // Basic preprocessor to ensure common patterns are recognized by remark-math
 const preprocessMarkdown = (text: string) => {
     return text
+        // Escape dollar signs followed by digits (currency) to prevent aggressive math pairing
+        .replace(/\$(\d)/g, '\\$$$1')
         // Convert (( formula )) to $$ formula $$
         .replace(/\(\(\s*([^)]+)\s*\)\)/g, '$$$$$1$$$$')
         // Ensure subscripts are handled correctly in markdown context (avoiding italics collision)
@@ -52,7 +54,16 @@ const QAConsole: React.FC<QAConsoleProps> = ({
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Only auto-scroll if user is already near the bottom
+        if (messagesEndRef.current) {
+            const container = messagesEndRef.current.parentElement;
+            if (container) {
+                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                if (isNearBottom) {
+                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }
     }, [messages]);
 
     const handleSend = async (questionText?: string) => {

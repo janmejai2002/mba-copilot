@@ -51,13 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Fallback: If project-based key creation fails (e.g. insufficient permissions),
-        // return the master key directly.
-        console.warn('Falling back to master Deepgram key');
-        return res.status(200).json({ token: apiKey });
+        // we should NOT return the master key to the client for security reasons.
+        console.error('Failed to create temporary Deepgram key. Please ensure your API key has "usage:write" permissions.');
+        return res.status(500).json({ error: 'Failed to create temporary session token.' });
 
     } catch (error) {
-        console.error('Deepgram API Error, falling back to master key:', error);
-        // Final fallback to the key itself
-        return res.status(200).json({ token: apiKey });
+        console.error('Deepgram API Error:', error);
+        return res.status(500).json({ error: 'Deepgram API connection failed.' });
     }
 }

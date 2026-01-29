@@ -43,7 +43,8 @@ const parseFullCSV = (data: string) => {
         currentRow.push(currentColumn.trim());
         rows.push(currentRow);
     }
-    return rows;
+    // Clean all cells of stray outer quotes
+    return rows.map(row => row.map(cell => cell.replace(/^["']+|["']+$/g, '').trim()));
 };
 
 export async function syncTimetable() {
@@ -99,12 +100,14 @@ export async function syncTimetable() {
                     const subjectPart = parts[0] || "";
                     let subjectCode = subjectPart.split('[')[0]?.trim() || "Unknown";
 
-                    // Clean up potential stray quotes from CSV splitting
-                    subjectCode = subjectCode.replace(/^["']+|["']+$/g, '').trim();
+                    // Clean up potential stray quotes and non-alpha junk from start/end
+                    subjectCode = subjectCode.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
 
-                    // Filter out date-like strings that might have a [ in them (unlikely but possible if formatting is weird)
-                    const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(subjectCode);
-                    if (isDatePattern || subjectCode.length < 2) return;
+                    // Filter out date-like strings and miscellaneous junk
+                    const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectCode);
+                    const isJunk = /^(Act|Activity|Holiday|No Class|TBD|Vacation)$/i.test(subjectCode);
+
+                    if (isDatePattern || isJunk || subjectCode.length < 2) return;
 
                     // Extract Session/Section
                     const sessionMatch = content.match(/\[(\d+)\]/);
@@ -117,19 +120,20 @@ export async function syncTimetable() {
                     let faculty = lookup ? lookup.faculty : (parts[1] || "").replace(/[\[\]"']/g, '').trim();
                     if (!faculty || faculty === "Unknown") faculty = (parts[1] || "").replace(/[\[\]"']/g, '').trim() || "Unknown";
 
-                    if (subjectName && subjectName !== "Unknown" && !isDatePattern) {
+                    // Second filter pass on the resolved name
+                    const isNameDatePattern = /^\d{4}|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectName);
+                    if (subjectName && subjectName !== "Unknown" && !isNameDatePattern && !isJunk) {
                         subjectsFound.set(subjectName, faculty);
                     }
 
                     // Parse Date for timestamp
-                    // Format: "Jan 13, 2026 Tuesday" -> "Jan 13, 2026"
-                    const dateMatch = currentActiveDate.match(/^[A-Z][a-z]{2}\s\d{1,2},?\s\d{4}/);
+                    const dateMatch = currentActiveDate.match(/[A-Z][a-z]{2}\s\d{1,2},?\s\d{4}/);
                     if (dateMatch) {
                         const cleanedDate = dateMatch[0];
                         const startTime = slotTimes[slotIdx].split('-')[0].trim();
                         const sessionDate = new Date(`${cleanedDate} ${startTime}`).getTime();
 
-                        if (!isNaN(sessionDate)) {
+                        if (!isNaN(sessionDate) && !isNameDatePattern && !isJunk) {
                             sessionsToCreate.push({
                                 title: `${subjectName} (Session ${sessionNum}) [Sec ${sectionLetter}]`,
                                 subjectId: subjectName,
@@ -164,7 +168,7 @@ export async function applyTimetableSync(userId: string) {
     for (const sub of data.subjectsFound) {
         if (!existingSubjects.find(s => s.name === sub.name)) {
             await storage.saveSubject({
-                id: Math.random().toString(36).substr(2, 9),
+                id: crypto.randomUUID(),
                 userId,
                 name: sub.name,
                 description: `Faculty: ${sub.faculty}`,
@@ -193,7 +197,7 @@ export async function applyTimetableSync(userId: string) {
 
                 if (!exists) {
                     await storage.saveSession({
-                        id: Math.random().toString(36).substr(2, 9),
+                        id: crypto.randomUUID(),
                         userId,
                         subjectId: subject.id,
                         title: sessionData.title,

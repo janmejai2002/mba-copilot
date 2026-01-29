@@ -95,7 +95,7 @@ const App: React.FC = () => {
 
   const createSubject = async (name: string, description: string) => {
     const newSubject: Subject = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       userId: user?.id,
       name,
       description,
@@ -133,7 +133,7 @@ const App: React.FC = () => {
     }
 
     const newSession: Session = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       userId: user?.id,
       subjectId,
       title,

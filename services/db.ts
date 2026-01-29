@@ -28,19 +28,30 @@ export const setDriveToken = (token: string) => {
     gapiAccessToken = token;
 };
 
+// Debounce timer for sync
+let syncTimeout: any = null;
+
 const syncToDrive = async () => {
     if (!gapiAccessToken) return;
 
-    try {
-        const subjects = await db.subjects.toArray();
-        const sessions = await db.sessions.toArray();
-        const backupData = { subjects, sessions, lastSync: Date.now() };
+    // Clear existing timeout to reset the debounce
+    if (syncTimeout) clearTimeout(syncTimeout);
 
-        const result = await googleDrive.saveToAppData(gapiAccessToken, 'mba_copilot_backup.json', backupData, gdriveFileId || undefined);
-        if (result && result.id) gdriveFileId = result.id;
-    } catch (e) {
-        console.error("GDrive Sync Failed:", e);
-    }
+    // Set a new timeout (e.g., 30 seconds)
+    syncTimeout = setTimeout(async () => {
+        try {
+            console.log("☁️ Syncing to Google Drive...");
+            const subjects = await db.subjects.toArray();
+            const sessions = await db.sessions.toArray();
+            const backupData = { subjects, sessions, lastSync: Date.now() };
+
+            const result = await googleDrive.saveToAppData(gapiAccessToken, 'mba_copilot_backup.json', backupData, gdriveFileId || undefined);
+            if (result && result.id) gdriveFileId = result.id;
+            console.log("✅ Drive Sync Complete");
+        } catch (e) {
+            console.error("GDrive Sync Failed:", e);
+        }
+    }, 30000); // 30 second debounce
 };
 
 export const storage = {

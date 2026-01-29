@@ -39,6 +39,19 @@ body {
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.011em;
     transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Prevent layout shift from scrollbar appearing/disappearing */
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+
+    /* Smooth scrolling but prevent auto-scroll jumps */
+    scroll-behavior: smooth;
+}
+
+html {
+    /* Reserve space for scrollbar to prevent layout shifts */
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
 }
 
 .apple-card {

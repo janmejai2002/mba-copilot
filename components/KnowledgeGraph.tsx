@@ -21,6 +21,8 @@ const renderTextWithFormulas = (text: string) => {
     try {
         // First, handle common non-LaTeX patterns and citations
         let processedText = text
+            // Escape dollar signs followed by digits (currency) to prevent aggressive math pairing
+            .replace(/\$(\d)/g, '\\$$$1')
             // Remove citation brackets like [1][2]
             .replace(/\[\d+\]/g, '')
             // Convert (( formula )) to $$ formula $$ only if it looks like math (has =, +, -, /, *, _ or ^)

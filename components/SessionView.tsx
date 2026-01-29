@@ -4,7 +4,7 @@ import { Subject, Session, TranscriptionTurn, Note, Attachment } from '../types'
 import { generateSessionInsight, extractConceptsFromMaterials } from '../services/gemini';
 import { callPerplexity, extractKeywords, explainConcept, generateSuggestedQuestions } from '../services/perplexity';
 import QAConsole from './QAConsole';
-import KnowledgeGraph from './KnowledgeGraph';
+import KnowledgeGraph from './EnhancedKnowledgeGraph';
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
 import UnifiedInput from './UnifiedInput';
@@ -86,7 +86,17 @@ const SessionView: React.FC<SessionViewProps> = ({
   };
 
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Only auto-scroll if user is already near the bottom (within 100px)
+    // This prevents annoying jumps when user is reading earlier transcript
+    if (transcriptEndRef.current) {
+      const container = transcriptEndRef.current.parentElement;
+      if (container) {
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        if (isNearBottom) {
+          transcriptEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    }
   }, [transcription]);
 
   const updateTranscription = useCallback((role: 'user' | 'model' | 'system', text: string) => {
@@ -218,9 +228,30 @@ const SessionView: React.FC<SessionViewProps> = ({
 
   const stopRecording = () => {
     setIsRecording(false);
-    if (socketRef.current) socketRef.current.close();
-    if (audioContextRef.current) audioContextRef.current.close().catch(() => { });
-    if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+
+    // Close WebSocket connection
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    // Close audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => { });
+      audioContextRef.current = null;
+    }
+
+    // Stop all media tracks (this removes the red recording indicator)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false; // Extra safety
+      });
+      streamRef.current = null;
+    }
+
+    // Clear analyser state
+    setAnalyser(null);
   };
 
   const handleEndClass = async () => {
@@ -314,12 +345,47 @@ const SessionView: React.FC<SessionViewProps> = ({
               <span className="text-[10px] font-bold text-black/60">{volumeBoost}x</span>
             </div>
             {isRecording && <AudioVisualizer analyser={analyser} />}
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`px-6 py-2.5 rounded-full font-bold uppercase tracking-widest text-[11px] ${isRecording ? 'bg-red-500 text-white' : 'bg-black text-white'}`}
-            >
-              {isRecording ? 'End Session' : 'Live Copilot'}
-            </button>
+
+            {/* Manual Minimize Button */}
+            {isRecording && setIsMiniMode && (
+              <button
+                onClick={() => {
+                  setIsMiniMode(true);
+                  onBack();
+                }}
+                className="p-2.5 bg-black/[0.03] hover:bg-black/[0.08] text-black/60 rounded-full transition-all"
+                title="Minimize to PIP"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
+
+            {isRecording ? (
+              <button
+                onClick={stopRecording}
+                className="px-6 py-2.5 bg-red-500 text-white rounded-full font-bold uppercase tracking-widest text-[11px] animate-pulse"
+              >
+                Stop Recording
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                {transcription.length > 0 && !insight && (
+                  <button
+                    onClick={handleEndClass}
+                    disabled={isSummarizing}
+                    className="px-6 py-2.5 bg-blue-600 text-white rounded-full font-bold uppercase tracking-widest text-[11px] flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSummarizing ? 'Analyzing...' : <> <Sparkles className="w-3.5 h-3.5" /> Generate Summary</>}
+                  </button>
+                )}
+                <button
+                  onClick={startRecording}
+                  className="px-6 py-2.5 bg-black text-white rounded-full font-bold uppercase tracking-widest text-[11px]"
+                >
+                  {transcription.length > 0 ? 'Resume Copilot' : 'Start Live Copilot'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -391,6 +457,7 @@ const SessionView: React.FC<SessionViewProps> = ({
             }}
             messages={consoleMessages}
             onMessagesChange={setConsoleMessages}
+            onExpand={() => setConsoleModalOpen(true)}
           />
           <KnowledgeGraph concepts={concepts} />
           {insight && (
@@ -414,7 +481,15 @@ const SessionView: React.FC<SessionViewProps> = ({
       </ExpandableModal>
 
       <ExpandableModal isOpen={consoleModalOpen} onClose={() => setConsoleModalOpen(false)} title="Doubt Console">
-        <QAConsole onAskAI={async (q) => callPerplexity(q)} messages={consoleMessages} onMessagesChange={setConsoleMessages} />
+        <QAConsole
+          suggestedQuestions={suggestedQuestions}
+          onAskAI={async (query) => {
+            const context = transcription.slice(-100).map(t => t.text).join(' ');
+            return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+          }}
+          messages={consoleMessages}
+          onMessagesChange={setConsoleMessages}
+        />
       </ExpandableModal>
 
       <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Knowledge Graph">
