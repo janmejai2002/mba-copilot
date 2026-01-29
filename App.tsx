@@ -22,6 +22,7 @@ import { useCredits } from './hooks/useCredits';
 import TimetableTest from './components/TimetableTest';
 import TimetableValidator from './components/TimetableValidator';
 import Background3D from './components/Background3D';
+import { Analytics } from '@vercel/analytics/react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<GoogleUser | null>(() => {
@@ -459,6 +460,7 @@ const App: React.FC = () => {
       {view === 'privacy' && <PrivacyPolicy />}
       {view === 'terms' && <TermsOfService />}
       {view === 'refund_policy' && <RefundPolicy />}
+      <Analytics />
     </Layout >
   );
 };
