@@ -15,27 +15,42 @@ export const useCreditStore = create<CreditState>((set, get) => ({
     credits: 0,
     setCredits: (credits) => set({ credits }),
     loadCredits: async () => {
-        const status = await paymentService.getSubscriptionStatus();
+        try {
+            const userStr = localStorage.getItem('vidyos_user');
+            if (!userStr) return;
+            const user = JSON.parse(userStr);
+
+            const response = await fetch(`/api/verify-subscription?userId=${user.id}`);
+            if (response.ok) {
+                const status = await response.json();
+                // If server has credits, sync them
+                if (status.credits !== undefined) {
+                    set({ credits: status.credits });
+                    localStorage.setItem('vidyos_credits', status.credits.toString());
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to sync credits from server', e);
+        }
+
+        // Fallback to local
         const savedCredits = localStorage.getItem('vidyos_credits');
         if (savedCredits) {
             set({ credits: parseInt(savedCredits) });
-        } else {
-            const initial = status.isSovereign ? 500 : 50;
-            set({ credits: initial });
-            localStorage.setItem('vidyos_credits', initial.toString());
         }
     },
     consumeCredits: async (amount, operation, onInsufficient) => {
         const { credits } = get();
         if (credits < amount) {
-            console.warn(`[Credit Logic] Insufficient credits for ${operation}.`);
             onInsufficient?.();
             return false;
         }
 
         const key = securityService.generateIdempotencyKey(operation);
-        console.log(`[Sovereign Shield] Processing locked transaction: ${key}`);
 
+        // In a real app, we'd send this to the server to decrement properly
+        // For now, we simulate the server handshake
         const newBalance = credits - amount;
         set({ credits: newBalance });
         localStorage.setItem('vidyos_credits', newBalance.toString());

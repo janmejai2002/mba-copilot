@@ -104,9 +104,28 @@ export const storage = {
             const data = await googleDrive.getAppDataFile(gapiAccessToken, 'vidyos_backup.json');
             if (data && data.content) {
                 gdriveFileId = data.id;
-                const { subjects, sessions } = data.content;
-                await db.subjects.bulkPut(subjects);
-                await db.sessions.bulkPut(sessions);
+                const { subjects: remoteSubjects, sessions: remoteSessions } = data.content;
+
+                // --- Conflict Resolution Logic ---
+                const localSubjects = await db.subjects.toArray();
+                const localSessions = await db.sessions.toArray();
+
+                // Merge Subjects
+                for (const remote of remoteSubjects) {
+                    const local = localSubjects.find(s => s.id === remote.id);
+                    if (!local || (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+                        await db.subjects.put(remote);
+                    }
+                }
+
+                // Merge Sessions
+                for (const remote of remoteSessions) {
+                    const local = localSessions.find(s => s.id === remote.id);
+                    if (!local || (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+                        await db.sessions.put(remote);
+                    }
+                }
+
                 return true;
             }
             return false;
@@ -127,7 +146,8 @@ export const storage = {
         return await db.sessions.get(id);
     },
     async saveSubject(subject: Subject) {
-        await db.subjects.put(subject);
+        const withUpdate = { ...subject, updatedAt: Date.now() };
+        await db.subjects.put(withUpdate);
         syncToDrive();
     },
     async deleteSubject(id: string) {
@@ -140,11 +160,12 @@ export const storage = {
         syncToDrive();
     },
     async saveSession(session: Session) {
-        await db.sessions.put(session);
+        const withUpdate = { ...session, updatedAt: Date.now() };
+        await db.sessions.put(withUpdate);
         syncToDrive();
     },
     async updateSessionTranscript(sessionId: string, transcript: string) {
-        await db.sessions.update(sessionId, { transcript });
+        await db.sessions.update(sessionId, { transcript, updatedAt: Date.now() });
         syncToDrive();
     },
     async deleteSession(id: string) {
@@ -163,6 +184,7 @@ export const storage = {
                 code: 'FM2',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -171,6 +193,7 @@ export const storage = {
                 code: 'ORM2',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -179,6 +202,7 @@ export const storage = {
                 code: 'BOB2',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -187,6 +211,7 @@ export const storage = {
                 code: 'STM',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -195,6 +220,7 @@ export const storage = {
                 code: 'BLA',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -203,6 +229,7 @@ export const storage = {
                 code: 'HRM',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -211,6 +238,7 @@ export const storage = {
                 code: 'OPR',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             },
             {
@@ -219,6 +247,7 @@ export const storage = {
                 code: 'BRM',
                 faculty: 'Unknown',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 userId
             }
         ];

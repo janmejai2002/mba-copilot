@@ -36,17 +36,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     ];
 
     return (
-        <aside className="fixed bottom-0 left-0 w-full h-20 md:h-screen md:w-24 md:left-0 md:top-0 z-[1100] flex flex-row md:flex-col items-center justify-around md:justify-start md:py-10 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-t md:border-t-0 md:border-r border-black/5 dark:border-white/5 transition-all">
+        <aside className="fixed bottom-0 left-0 w-full h-16 md:h-screen md:w-20 md:left-0 md:top-0 z-[1100] flex flex-row md:flex-col items-center justify-around md:justify-start md:py-6 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-t md:border-t-0 md:border-r border-black/5 dark:border-white/5 transition-all">
             {/* Logo */}
             <div
-                className="hidden md:flex w-12 h-12 bg-black dark:bg-white rounded-[1.25rem] items-center justify-center cursor-pointer mb-14 group hover:scale-110 active:scale-95 transition-all shadow-xl shadow-black/10 dark:shadow-white/10"
+                className="hidden md:flex w-10 h-10 bg-black dark:bg-white rounded-xl items-center justify-center cursor-pointer mb-8 group hover:scale-110 active:scale-95 transition-all shadow-xl shadow-black/10 dark:shadow-white/10"
                 onClick={() => onViewChange('dashboard')}
             >
-                <span className="text-white dark:text-black font-black text-xl">V</span>
+                <span className="text-white dark:text-black font-black text-lg">V</span>
             </div>
 
             {/* Nav Items */}
-            <div className="flex flex-row md:flex-col gap-4 md:gap-8 items-center">
+            <div className="flex flex-row md:flex-col gap-3 md:gap-6 items-center">
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeView === item.id || (item.id === 'dashboard' && activeView === 'dashboard');
@@ -55,58 +55,58 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <button
                             key={item.id}
                             onClick={() => onViewChange(item.id)}
-                            className={`group relative w-12 h-12 flex items-center justify-center rounded-2xl transition-all ${isActive
-                                ? 'bg-black text-white dark:bg-white dark:text-black shadow-lg'
+                            className={`group relative w-10 h-10 flex items-center justify-center rounded-xl transition-all ${isActive
+                                ? 'bg-black text-white dark:bg-white dark:text-black shadow-md'
                                 : 'text-black/30 dark:text-white/30 hover:bg-black/5 dark:hover:bg-white/5 hover:text-black dark:hover:text-white'
                                 }`}
                         >
-                            <Icon className="w-5 h-5" />
-                            <span className="absolute left-full ml-4 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
+                            <Icon className="w-4.5 h-4.5" />
+                            <span className="absolute left-full ml-4 px-2 py-1 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-md opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
                                 {item.label}
                             </span>
                         </button>
                     );
                 })}
 
-                <div className="hidden md:block w-8 h-px bg-black/5 dark:bg-white/5 mx-auto my-2" />
+                <div className="hidden md:block w-6 h-px bg-black/5 dark:bg-white/5 mx-auto my-1" />
 
                 <button
                     onClick={onOpenSettings}
-                    className="group relative w-12 h-12 flex items-center justify-center rounded-2xl text-black/30 dark:text-white/30 hover:bg-black/5 dark:hover:bg-white/5 hover:text-black dark:hover:text-white transition-all"
+                    className="group relative w-10 h-10 flex items-center justify-center rounded-xl text-black/30 dark:text-white/30 hover:bg-black/5 dark:hover:bg-white/5 hover:text-black dark:hover:text-white transition-all"
                 >
-                    <Settings className="w-5 h-5" />
-                    <span className="absolute left-full ml-4 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none">
+                    <Settings className="w-4.5 h-4.5" />
+                    <span className="absolute left-full ml-4 px-2 py-1 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-md opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none">
                         Settings
                     </span>
                 </button>
 
                 <button
                     onClick={onOpenPricing}
-                    className="group relative w-12 h-12 flex items-center justify-center rounded-2xl text-[var(--vidyos-gold)] hover:bg-[var(--vidyos-gold-light)] dark:hover:bg-[var(--vidyos-gold)]/10 transition-all shadow-sm"
+                    className="group relative w-10 h-10 flex items-center justify-center rounded-xl text-[var(--vidyos-gold)] hover:bg-[var(--vidyos-gold-light)] dark:hover:bg-[var(--vidyos-gold)]/10 transition-all shadow-sm"
                 >
-                    <Sparkles className="w-5 h-5" />
-                    <span className="absolute left-full ml-4 px-3 py-1.5 bg-[var(--vidyos-gold)] text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
-                        Sovereign Tier
+                    <Sparkles className="w-4.5 h-4.5" />
+                    <span className="absolute left-full ml-4 px-2 py-1 bg-[var(--vidyos-gold)] text-white text-[9px] font-black uppercase tracking-widest rounded-md opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap">
+                        Sovereign
                     </span>
                 </button>
             </div>
 
             {/* Bottom Controls - Combined or hidden on mobile to avoid crowding */}
-            <div className="hidden md:flex flex-col gap-6 items-center">
+            <div className="hidden md:flex flex-col mt-auto gap-4 pb-6 items-center">
                 <button
                     onClick={onToggleDarkMode}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:scale-110 active:scale-95 transition-all"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:scale-110 active:scale-95 transition-all"
                 >
-                    {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                 </button>
 
                 {onLogout && (
                     <button
                         onClick={onLogout}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500/60 hover:bg-red-500 hover:text-white transition-all"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 text-red-500/60 hover:bg-red-500 hover:text-white transition-all"
                         title="Logout"
                     >
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="w-3.5 h-3.5" />
                     </button>
                 )}
 

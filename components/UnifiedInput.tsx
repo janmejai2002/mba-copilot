@@ -89,12 +89,12 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
             onDrop={handleDrop}
         >
             {/* Mode Switcher */}
-            <div className="flex gap-2 px-6 pt-6 mb-4">
+            <div className="flex gap-2 px-4 pt-4 mb-2">
                 {(['note', 'question', 'todo'] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setInputType(t)}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${getModeStyles(t, inputType === t)}`}
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${getModeStyles(t, inputType === t)}`}
                     >
                         {getTypeIcon(t)}
                         {t}
@@ -104,21 +104,21 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
 
             {/* Attachments Preview */}
             {attachments.length > 0 && (
-                <div className="flex gap-4 px-6 mb-4 overflow-x-auto pb-2 custom-scrollbar">
+                <div className="flex gap-3 px-4 mb-3 overflow-x-auto pb-1 custom-scrollbar">
                     {attachments.map(att => (
                         <div key={att.id} className="relative group flex-shrink-0 animate-apple-in">
                             {att.type === 'image' ? (
-                                <img src={att.url} alt={att.name} className="h-16 w-16 object-cover rounded-2xl border border-[var(--glass-border)] shadow-sm" />
+                                <img src={att.url} alt={att.name} className="h-12 w-12 object-cover rounded-xl border border-[var(--glass-border)] shadow-sm" />
                             ) : (
-                                <div className="h-16 w-16 flex items-center justify-center bg-black/[0.03] rounded-2xl border border-[var(--glass-border)]">
-                                    <FileText className="w-6 h-6 text-[var(--text-muted)]" />
+                                <div className="h-12 w-12 flex items-center justify-center bg-black/[0.03] rounded-xl border border-[var(--glass-border)]">
+                                    <FileText className="w-5 h-5 text-[var(--text-muted)]" />
                                 </div>
                             )}
                             <button
                                 onClick={() => setAttachments(attachments.filter(a => a.id !== att.id))}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center scale-0 group-hover:scale-100 transition-transform shadow-xl"
+                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black text-white rounded-full flex items-center justify-center scale-0 group-hover:scale-100 transition-transform shadow-xl"
                             >
-                                <X className="w-3 h-3" />
+                                <X className="w-2.5 h-2.5" />
                             </button>
                         </div>
                     ))}
@@ -126,12 +126,12 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
             )}
 
             {/* Input Interface */}
-            <div className="flex items-end gap-4 px-6 pb-6">
+            <div className="flex items-end gap-3 px-4 pb-4">
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-4 bg-black/[0.03] hover:bg-black/[0.06] rounded-2xl text-[var(--text-muted)] transition-all active:scale-90"
+                    className="p-3 bg-black/[0.03] hover:bg-black/[0.06] rounded-xl text-[var(--text-muted)] transition-all active:scale-90"
                 >
-                    <Paperclip className="w-5 h-5" />
+                    <Paperclip className="w-4.5 h-4.5" />
                 </button>
                 <input
                     type="file"
@@ -146,7 +146,7 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="flex-1 max-h-48 min-h-[50px] bg-transparent border-none outline-none text-md font-bold text-[var(--text-main)] resize-none py-4 placeholder:text-[var(--text-muted)] placeholder:opacity-30 leading-relaxed"
+                    className="flex-1 max-h-32 min-h-[40px] bg-transparent border-none outline-none text-sm font-bold text-[var(--text-main)] resize-none py-3 placeholder:text-[var(--text-muted)] placeholder:opacity-30 leading-relaxed"
                     rows={1}
                     style={{ height: 'auto' }}
                     onInput={(e) => {
@@ -159,9 +159,9 @@ const UnifiedInput: React.FC<UnifiedInputProps> = ({ onSend, placeholder = "Type
                 <button
                     onClick={handleSend}
                     disabled={!text.trim() && attachments.length === 0}
-                    className={`p-4 rounded-2xl transition-all shadow-xl active:scale-95 ${(!text.trim() && attachments.length === 0) ? 'bg-black/5 text-black/10' : 'bg-black text-white shadow-black/20 hover:scale-105'}`}
+                    className={`p-3 rounded-xl transition-all shadow-lg active:scale-95 ${(!text.trim() && attachments.length === 0) ? 'bg-black/5 text-black/10' : 'bg-black text-white shadow-black/20 hover:scale-105'}`}
                 >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4.5 h-4.5" />
                 </button>
             </div>
 

@@ -23,11 +23,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     showAuth: false,
     showOnboarding: !localStorage.getItem('vidyos_onboarding_complete'),
     isSovereign: false,
-    setUser: (user) => {
+    setUser: async (user) => {
         if (user) {
             localStorage.setItem('vidyos_user', JSON.stringify(user));
+            // Verify status with server immediately
+            try {
+                const response = await fetch(`/api/verify-subscription?userId=${user.id}`);
+                if (response.ok) {
+                    const status = await response.json();
+                    set({ isSovereign: status.isSovereign });
+                }
+            } catch (e) {
+                console.error("Shield verification failed", e);
+            }
         } else {
             localStorage.removeItem('vidyos_user');
+            set({ isSovereign: false });
         }
         set({ user });
     },

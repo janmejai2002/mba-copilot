@@ -18,7 +18,7 @@ const TranscriptTurnItem: React.FC<Props> = React.memo(({ turn }) => {
                     {new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
             </div>
-            <div className={`text-xl md:text-2xl font-bold leading-[1.6] tracking-tight ${turn.role === 'user' ? 'text-black font-semibold' : 'text-purple-600 font-medium italic'} break-words`}>
+            <div className={`text-lg md:text-xl font-medium leading-[1.6] tracking-tight ${turn.role === 'user' ? 'text-black font-medium' : 'text-purple-600 italic'} break-words`}>
                 {turn.text}
             </div>
         </div>

@@ -46,21 +46,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   });
 
   return (
-    <div className="space-y-24 animate-apple-in">
+    <div className="space-y-16 animate-apple-in max-w-[1400px] mx-auto px-4">
 
       {/* Today's Agenda Header */}
       {sessionsForToday.length > 0 && (
-        <section className="vidyos-card relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-[var(--vidyos-teal-light)] to-transparent pointer-events-none" />
+        <section className="vidyos-card relative overflow-hidden group p-6">
+          <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[var(--vidyos-teal-light)] to-transparent pointer-events-none" />
           <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-10">
-              <div className="p-3 bg-[var(--vidyos-teal)] rounded-2xl shadow-xl shadow-[var(--vidyos-teal-glow)]">
-                <Clock className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-[var(--vidyos-teal)] rounded-xl shadow-lg">
+                <Clock className="w-5 h-5 text-white" />
               </div>
-              <h3 className="label-caps mb-0 pt-1">Active Schedule • {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
+              <h3 className="label-caps mb-0 text-[10px]">Active Schedule • {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {sessionsForToday.map(session => {
                 const isNow = session.id === currentClass?.id;
                 const subject = subjects.find(sub => sub.id === session.subjectId);
@@ -68,29 +68,29 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div
                     key={session.id}
                     onClick={() => onOpenSession(session.id)}
-                    className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer group relative ${isNow ? 'bg-[var(--text-main)] border-[var(--text-main)] shadow-2xl scale-[1.05] z-20' : 'bg-white/50 border-[var(--glass-border)] hover:bg-white'
+                    className={`p-6 rounded-3xl border transition-all cursor-pointer group relative ${isNow ? 'bg-[var(--text-main)] border-[var(--text-main)] shadow-xl scale-[1.02] z-20' : 'bg-white/50 border-[var(--glass-border)] hover:bg-white'
                       }`}
                   >
-                    {isNow && <div className="absolute -top-3 -right-3 bg-red-500 text-white text-[9px] font-900 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse border-4 border-white dark:border-slate-900 z-30">Live Now</div>}
-                    <div className="flex justify-between items-start mb-6">
-                      <span className={`text-[11px] font-black uppercase tracking-widest ${isNow ? 'text-white/50' : 'text-[var(--vidyos-teal)]'}`}>
+                    {isNow && <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-900 px-2 py-1 rounded-full uppercase tracking-widest animate-pulse border-2 border-white dark:border-slate-900 z-30">Live</div>}
+                    <div className="flex justify-between items-start mb-4">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${isNow ? 'text-white/50' : 'text-[var(--vidyos-teal)]'}`}>
                         {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {isNow ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenSession(session.id); }}
-                          className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-2xl"
+                          className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-xl"
                         >
-                          <Play className="w-5 h-5 fill-current" />
+                          <Play className="w-4 h-4 fill-current ml-0.5" />
                         </button>
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center">
-                          <Calendar className="w-4 h-4 text-[var(--text-muted)]" />
+                        <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center">
+                          <Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                         </div>
                       )}
                     </div>
-                    <h4 className={`font-black text-xl leading-snug mb-3 ${isNow ? 'text-white' : 'text-[var(--text-main)]'}`}>{session.title}</h4>
-                    <p className={`text-[12px] font-bold tracking-wide truncate ${isNow ? 'text-white/50' : 'text-[var(--text-muted)]'}`}>{subject?.name || "Unknown Subject"}</p>
+                    <h4 className={`font-black text-lg leading-snug mb-2 ${isNow ? 'text-white' : 'text-[var(--text-main)]'}`}>{session.title}</h4>
+                    <p className={`text-[11px] font-bold tracking-wide truncate ${isNow ? 'text-white/50' : 'text-[var(--text-muted)]'}`}>{subject?.name || "Unknown Subject"}</p>
                   </div>
                 );
               })}
@@ -100,28 +100,29 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       <section>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
           <div>
-            <span className="label-caps">Academic Assets</span>
-            <h2 className="section-title">Your Library</h2>
+            <span className="label-caps text-[10px]">Academic Assets</span>
+            <h2 className="text-4xl font-black tracking-tight">Your Library</h2>
           </div>
           <button
             onClick={() => setShowSubjectModal(true)}
             className="btn-fusion"
+            style={{ padding: '12px 24px', fontSize: '0.75rem' }}
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             Add Subject
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {subjects.map(subject => (
             <div
               key={subject.id}
               onClick={() => onOpenSubject(subject.id)}
-              className="vidyos-card min-h-[300px] flex flex-col justify-between cursor-pointer group relative overflow-hidden"
+              className="vidyos-card min-h-[260px] p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--vidyos-teal-light)] rounded-full -mr-16 -mt-16 transition-all group-hover:scale-150 group-hover:bg-[var(--vidyos-teal-glow)] opacity-50" />
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--vidyos-teal-light)] rounded-full -mr-12 -mt-12 transition-all group-hover:scale-150 group-hover:bg-[var(--vidyos-teal-glow)] opacity-50" />
 
               <button
                 onClick={(e) => {
@@ -130,30 +131,30 @@ const Dashboard: React.FC<DashboardProps> = ({
                     onDeleteSubject(subject.id);
                   }
                 }}
-                className="absolute top-6 right-6 p-2 text-black/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-20"
+                className="absolute top-4 right-4 p-2 text-black/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-20"
                 title="Delete Subject"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
 
               <div className="relative z-10">
-                <div className="flex justify-between items-start mb-6">
-                  <h3 className="text-2xl font-black tracking-tight text-[var(--text-main)] group-hover:text-[var(--vidyos-teal)] transition-colors pr-10">{subject.name}</h3>
-                  <div className="w-12 h-12 rounded-full border border-[var(--glass-border)] flex items-center justify-center group-hover:bg-[var(--text-main)] group-hover:text-white transition-all shadow-premium">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-black tracking-tight text-[var(--text-main)] group-hover:text-[var(--vidyos-teal)] transition-colors pr-8">{subject.name}</h3>
+                  <div className="w-10 h-10 rounded-full border border-[var(--glass-border)] flex items-center justify-center group-hover:bg-[var(--text-main)] group-hover:text-white transition-all shadow-premium">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
                   </div>
                 </div>
-                <p className="text-sm text-[var(--text-muted)] leading-relaxed line-clamp-3 font-semibold opacity-80">{subject.description}</p>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-3 font-semibold opacity-80">{subject.description}</p>
               </div>
 
-              <div className="flex items-center justify-between mt-10 relative z-10">
-                <span className="text-[11px] font-black text-[var(--vidyos-teal)] uppercase tracking-widest opacity-60">
-                  {sessions.filter(s => s.subjectId === subject.id).length} Recordings
+              <div className="flex items-center justify-between mt-8 relative z-10">
+                <span className="text-[10px] font-black text-[var(--vidyos-teal)] uppercase tracking-widest opacity-60">
+                  {sessions.filter(s => s.subjectId === subject.id).length} Sessions
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedSubjectId(subject.id); setShowSessionModal(true); }}
                   className="btn-fusion"
-                  style={{ padding: '10px 20px', fontSize: '0.7rem' }}
+                  style={{ padding: '8px 16px', fontSize: '0.65rem' }}
                 >
                   Start New
                 </button>
@@ -254,6 +255,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     await db.sessions.delete(s.id);
                   }
                   if (master.groundingFiles) master.groundingFiles = [...new Set(master.groundingFiles)];
+                  master.updatedAt = Date.now();
                   await db.sessions.put(master);
                   mergeCount++;
                 }

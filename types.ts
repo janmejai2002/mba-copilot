@@ -28,6 +28,7 @@ export interface Subject {
   faculty?: string; // Professor name
   description?: string;
   createdAt: number;
+  updatedAt: number;
   masterDoc?: string;
   masterDocUpdated?: number;
 }
@@ -38,6 +39,7 @@ export interface Session {
   subjectId: string;
   title: string;
   date: number;
+  updatedAt: number;
   transcript: string; // Flat text version
   turns?: TranscriptionTurn[]; // Structured history
   concepts?: { keyword: string; explanation: string; timestamp: number }[];

@@ -139,7 +139,8 @@ const App: React.FC = () => {
       userId: user?.id,
       name,
       description,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
     await addSubject(newSubject);
   };
@@ -153,7 +154,6 @@ const App: React.FC = () => {
 
     if (existingSession) {
       setActiveSessionId(existingSession.id);
-      setIsMiniMode(false);
       setView('session');
       return;
     }
@@ -164,6 +164,7 @@ const App: React.FC = () => {
       subjectId,
       title,
       date: Date.now(),
+      updatedAt: Date.now(),
       transcript: '',
       turns: [],
       groundingFiles: [],
@@ -171,7 +172,6 @@ const App: React.FC = () => {
     };
     await addSession(newSession);
     setActiveSessionId(newSession.id);
-    setIsMiniMode(false);
     setView('session');
   };
 
@@ -184,6 +184,7 @@ const App: React.FC = () => {
         subjectId,
         title: format(date, 'MMM dd, yyyy'),
         date: date.getTime(),
+        updatedAt: Date.now(),
         transcript: '',
         turns: [],
         groundingFiles: [],

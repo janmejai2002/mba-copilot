@@ -12,10 +12,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Placeholder logic - in a real app, query your database here
     // const { data, error } = await supabase.from('subscriptions').select('*').eq('user_id', userId).single();
 
-    // For now, return synthesist tier as default
+    // For now, return synthesist tier as default with some initial credits
     return res.status(200).json({
         isSovereign: false,
-        tier: 'synthesist',
+        tier: 'Synthesist',
+        credits: 750,
         userId
     });
 }
