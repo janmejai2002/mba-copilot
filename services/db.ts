@@ -28,6 +28,11 @@ export const setDriveToken = (token: string) => {
     gapiAccessToken = token;
 };
 
+export const clearDriveToken = () => {
+    gapiAccessToken = null;
+    gdriveFileId = null;
+};
+
 let authErrorCallback: (() => void) | null = null;
 export const onAuthError = (cb: () => void) => {
     authErrorCallback = cb;
@@ -37,13 +42,31 @@ export const onAuthError = (cb: () => void) => {
 // Debounce timer for sync
 let syncTimeout: any = null;
 
+export const forceSyncToDrive = async () => {
+    if (!gapiAccessToken) return;
+    if (syncTimeout) clearTimeout(syncTimeout);
+
+    try {
+        console.log("☁️ Forcing sync to Google Drive...");
+        const subjects = await db.subjects.toArray();
+        const sessions = await db.sessions.toArray();
+        const backupData = { subjects, sessions, lastSync: Date.now() };
+
+        const result = await googleDrive.saveToAppData(gapiAccessToken, 'vidyos_backup.json', backupData, gdriveFileId || undefined);
+        if (result && result.id) gdriveFileId = result.id;
+        console.log("✅ Force Drive Sync Complete");
+    } catch (e: any) {
+        console.error("Force GDrive Sync Failed:", e);
+    }
+};
+
 const syncToDrive = async () => {
     if (!gapiAccessToken) return;
 
     // Clear existing timeout to reset the debounce
     if (syncTimeout) clearTimeout(syncTimeout);
 
-    // Set a new timeout (e.g., 30 seconds)
+    // Set a new timeout (reduced to 5 seconds)
     syncTimeout = setTimeout(async () => {
         try {
             console.log("☁️ Syncing to Google Drive...");
@@ -60,8 +83,19 @@ const syncToDrive = async () => {
                 authErrorCallback();
             }
         }
-    }, 30000); // 30 second debounce
+    }, 5000); // 5 second debounce
 };
+
+// Listen for tab close
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+        // We can't await here, but we can try to fire and forget
+        // Or use navigator.sendBeacon if it were an API, but for GDrive it's a fetch
+        if (gapiAccessToken) {
+            forceSyncToDrive();
+        }
+    });
+}
 
 export const storage = {
     async pullFromDrive() {

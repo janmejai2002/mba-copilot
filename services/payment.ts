@@ -12,6 +12,21 @@ export interface SubscriptionStatus {
 
 export const paymentService = {
     async getSubscriptionStatus(): Promise<SubscriptionStatus> {
+        try {
+            const userStr = localStorage.getItem('vidyos_user');
+            if (!userStr) return { isSovereign: false, tier: 'synthesist' };
+            const user = JSON.parse(userStr);
+
+            const response = await fetch(`/api/verify-subscription?userId=${user.id}`);
+            if (response.ok) {
+                const status = await response.json();
+                localStorage.setItem('vidyos_subscription', JSON.stringify(status));
+                return status;
+            }
+        } catch (e) {
+            console.error('Subscription verification failed, falling back to cache', e);
+        }
+
         const stored = localStorage.getItem('vidyos_subscription');
         if (stored) return JSON.parse(stored);
         return { isSovereign: false, tier: 'synthesist' };

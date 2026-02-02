@@ -13,39 +13,29 @@ import RefundPolicy from './components/RefundPolicy';
 import OnboardingWizard from './components/OnboardingWizard';
 import ExamNexus from './components/ExamNexus';
 import Practice from './components/Practice';
-import PricingModal from './components/PricingModal';
-import { storage, setDriveToken, onAuthError } from './services/db';
-import { GoogleUser, VidyosUser, CreditTransaction } from './types';
-import { paymentService, SubscriptionStatus } from './services/payment';
+import { setDriveToken, onAuthError, storage } from './services/db';
+import { GoogleUser } from './types';
+import { paymentService } from './services/payment';
 import { securityService } from './services/security';
-import { useCredits } from './hooks/useCredits';
 import TimetableTest from './components/TimetableTest';
 import TimetableValidator from './components/TimetableValidator';
-import Background3D from './components/Background3D';
 import NexusView from './pages/NexusView';
 
-const App: React.FC = () => {
-  const [user, setUser] = useState<GoogleUser | null>(() => {
-    const saved = localStorage.getItem('vidyos_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(null);
-  const [view, setView] = useState<'dashboard' | 'subject_home' | 'session' | 'nexus' | 'practice' | 'privacy' | 'terms' | 'refund_policy' | 'pricing'>('dashboard');
-  const [isLoading, setIsLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [isMiniMode, setIsMiniMode] = useState(false);
-  const [hash, setHash] = useState(window.location.hash);
-  const [showAuth, setShowAuth] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('vidyos_onboarding_complete');
-  });
-  const [isSovereign, setIsSovereign] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
+// Zustand Stores
+import { useAuthStore } from './stores/useAuthStore';
+import { useUIStore } from './stores/useUIStore';
+import { useSubjectStore } from './stores/useSubjectStore';
+import { useSessionStore } from './stores/useSessionStore';
+import { useCreditStore } from './stores/useCreditStore';
 
-  const { credits, consumeCredits, rechargeCredits } = useCredits(0, isSovereign, () => setShowPricing(true));
+const App: React.FC = () => {
+  const { user, showAuth, showOnboarding, isSovereign, setUser, setShowAuth, setShowOnboarding, setIsSovereign, logout } = useAuthStore();
+  const { view, isLoading, darkMode, showPricing, setView, setIsLoading, setDarkMode, setShowPricing, navigateTo } = useUIStore();
+  const { subjects, activeSubjectId, loadSubjects, addSubject, deleteSubject, clearAllSubjects, setActiveSubjectId } = useSubjectStore();
+  const { sessions, activeSessionId, isMiniMode, loadSessions, addSession, updateSession, deleteSession, setActiveSessionId, setIsMiniMode } = useSessionStore();
+  const { credits, loadCredits, consumeCredits } = useCreditStore();
+
+  const [hash, setHash] = useState(window.location.hash);
 
   useEffect(() => {
     const handleHashChange = () => setHash(window.location.hash);
@@ -71,35 +61,25 @@ const App: React.FC = () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handleLocationChange);
     };
-  }, []);
-
-  const navigateTo = (newView: string) => {
-    const cleanPath = newView === 'dashboard' ? '/' : `/${newView}`;
-    window.history.pushState({}, '', cleanPath);
-    if (newView === 'pricing') {
-      setShowPricing(true);
-    } else {
-      setView(newView as any);
-      setShowPricing(false);
-    }
-  };
+  }, [setView, setShowPricing]);
 
   useEffect(() => {
     if (user) {
       if (Date.now() > user.expiresAt) {
-        handleLogout();
+        logout();
         return;
       }
       setDriveToken(user.accessToken);
       initDB();
       checkSubscription();
+      loadCredits();
     } else {
       setIsLoading(false);
     }
 
     const unsubscribeAuthError = onAuthError(() => {
       alert("Your Google session has expired or is invalid. Please log in again.");
-      handleLogout();
+      logout();
     });
 
     return () => {
@@ -122,25 +102,16 @@ const App: React.FC = () => {
       await storage.initializeDefaultSubjects(user.id);
     }
 
-    const savedSubjects = await storage.getAllSubjects();
-    const savedSessions = await storage.getAllSessions();
-    setSubjects(savedSubjects);
-    setSessions(savedSessions);
+    await Promise.all([
+      loadSubjects(),
+      loadSessions()
+    ]);
 
     setIsLoading(false);
   }
 
   const handleAuthComplete = (googleUser: GoogleUser) => {
     setUser(googleUser);
-    localStorage.setItem('vidyos_user', JSON.stringify(googleUser));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('vidyos_user');
-    setSubjects([]);
-    setSessions([]);
-    setShowAuth(false);
   };
 
   useEffect(() => {
@@ -151,8 +122,7 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  const createSubject = async (name: string, description: string) => {
-    // Sovereign Shield: Hardware Quota Check
+  const handleCreateSubject = async (name: string, description: string) => {
     const canProceed = await securityService.verifyDeviceQuota();
     if (!canProceed) {
       alert("Sovereign Shield: Device Quota Exceeded. You have already reached the limit for free accounts on this device.");
@@ -171,24 +141,10 @@ const App: React.FC = () => {
       description,
       createdAt: Date.now()
     };
-    await storage.saveSubject(newSubject);
-    setSubjects([...subjects, newSubject]);
+    await addSubject(newSubject);
   };
 
-  const deleteSubject = async (id: string) => {
-    await storage.deleteSubject(id);
-    setSubjects(prev => prev.filter(s => s.id !== id));
-    setSessions(prev => prev.filter(s => s.subjectId !== id));
-  };
-
-  const clearAllSubjects = async () => {
-    if (!confirm("Permanently wipe all subjects? This will NOT delete recordings, but they will be orphaned.")) return;
-    await storage.clearAllSubjects();
-    setSubjects([]);
-    setSessions([]);
-  };
-
-  const startSession = async (subjectId: string, title: string) => {
+  const handleStartSession = async (subjectId: string, title: string) => {
     const today = new Date().toDateString();
     const existingSession = sessions.find(s =>
       s.subjectId === subjectId &&
@@ -213,37 +169,28 @@ const App: React.FC = () => {
       groundingFiles: [],
       groundingFileDetails: []
     };
-    await storage.saveSession(newSession);
-    setSessions([...sessions, newSession]);
+    await addSession(newSession);
     setActiveSessionId(newSession.id);
     setIsMiniMode(false);
     setView('session');
   };
 
-  const updateSession = async (updatedSession: Session) => {
-    await storage.saveSession(updatedSession);
-    setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
-  };
-
-  const createScheduledSessions = async (subjectId: string, dates: Date[]) => {
+  const handleCreateScheduledSessions = async (subjectId: string, dates: Date[]) => {
     const { format } = await import('date-fns');
-    const newSessions: Session[] = dates.map(date => ({
-      id: crypto.randomUUID(),
-      userId: user?.id,
-      subjectId,
-      title: format(date, 'MMM dd, yyyy'),
-      date: date.getTime(),
-      transcript: '',
-      turns: [],
-      groundingFiles: [],
-      groundingFileDetails: []
-    }));
-
-    for (const session of newSessions) {
-      await storage.saveSession(session);
+    for (const date of dates) {
+      const newSession: Session = {
+        id: crypto.randomUUID(),
+        userId: user?.id,
+        subjectId,
+        title: format(date, 'MMM dd, yyyy'),
+        date: date.getTime(),
+        transcript: '',
+        turns: [],
+        groundingFiles: [],
+        groundingFileDetails: []
+      };
+      await addSession(newSession);
     }
-
-    setSessions([...sessions, ...newSessions]);
   };
 
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
@@ -254,7 +201,7 @@ const App: React.FC = () => {
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
         userEmail={user?.email}
-        onLogout={handleLogout}
+        onLogout={logout}
         activeView="privacy"
         onViewChange={() => window.location.hash = ''}
         isPricingOpen={showPricing}
@@ -272,7 +219,7 @@ const App: React.FC = () => {
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
         userEmail={user?.email}
-        onLogout={handleLogout}
+        onLogout={logout}
         activeView="terms"
         onViewChange={() => window.location.hash = ''}
         isPricingOpen={showPricing}
@@ -284,13 +231,8 @@ const App: React.FC = () => {
     );
   }
 
-  if (hash === '#parser') {
-    return <TimetableTest />;
-  }
-
-  if (hash === '#validator') {
-    return <TimetableValidator />;
-  }
+  if (hash === '#parser') return <TimetableTest />;
+  if (hash === '#validator') return <TimetableValidator />;
 
   if (isLoading) {
     return <div className="h-screen w-screen flex items-center justify-center font-bold text-black/20 animate-pulse bg-[#f5f5f7]">Syncing with Drive...</div>;
@@ -305,10 +247,7 @@ const App: React.FC = () => {
   }
 
   if (user && showOnboarding) {
-    return <OnboardingWizard onComplete={() => {
-      localStorage.setItem('vidyos_onboarding_complete', 'true');
-      setShowOnboarding(false);
-    }} />;
+    return <OnboardingWizard onComplete={() => setShowOnboarding(false)} />;
   }
 
   return (
@@ -316,11 +255,9 @@ const App: React.FC = () => {
       darkMode={darkMode}
       onToggleDarkMode={() => setDarkMode(!darkMode)}
       userEmail={user?.email}
-      onLogout={handleLogout}
+      onLogout={logout}
       activeView={view}
-      onViewChange={(newView) => {
-        navigateTo(newView);
-      }}
+      onViewChange={(newView) => navigateTo(newView)}
       onClosePricing={() => setShowPricing(false)}
       credits={credits}
       tier={isSovereign ? 'Sovereign' : 'Synthesist'}
@@ -329,8 +266,8 @@ const App: React.FC = () => {
         <Dashboard
           subjects={subjects}
           sessions={sessions}
-          onCreateSubject={createSubject}
-          onStartSession={startSession}
+          onCreateSubject={handleCreateSubject}
+          onStartSession={handleStartSession}
           onOpenSession={(id) => {
             setActiveSessionId(id);
             setIsMiniMode(false);
@@ -341,131 +278,113 @@ const App: React.FC = () => {
             setView('subject_home');
           }}
           onDeleteSubject={deleteSubject}
+          onDeleteSession={deleteSession}
           onClearAllSubjects={clearAllSubjects}
         />
       )}
 
-      {
-        view === 'subject_home' && activeSubjectId && (
-          <SubjectHome
-            subject={subjects.find(s => s.id === activeSubjectId)!}
-            sessions={sessions.filter(s => s.subjectId === activeSubjectId)}
-            onBack={() => navigateTo('dashboard')}
-            onOpenSession={(id) => {
-              setActiveSessionId(id);
-              setView('session');
-            }}
-            onStartNewSession={() => {
-              setShowNewSessionModal(true);
-            }}
-            onCreateScheduledSessions={(dates) => {
-              createScheduledSessions(activeSubjectId, dates);
-            }}
-          />
-        )
-      }
+      {view === 'subject_home' && activeSubjectId && (
+        <SubjectHome
+          subject={subjects.find(s => s.id === activeSubjectId)!}
+          sessions={sessions.filter(s => s.subjectId === activeSubjectId)}
+          onBack={() => navigateTo('dashboard')}
+          onOpenSession={(id) => {
+            setActiveSessionId(id);
+            setView('session');
+          }}
+          onStartNewSession={() => setShowNewSessionModal(true)}
+          onCreateScheduledSessions={(dates) => handleCreateScheduledSessions(activeSubjectId, dates)}
+        />
+      )}
 
-      {
-        view === 'nexus' && (
-          <ExamNexus
-            subjects={subjects}
-            sessions={sessions}
-            onOpenSession={(id) => {
-              setActiveSessionId(id);
-              setView('session');
-            }}
-          />
-        )
-      }
+      {view === 'nexus' && (
+        <ExamNexus
+          subjects={subjects}
+          sessions={sessions}
+          onOpenSession={(id) => {
+            setActiveSessionId(id);
+            setView('session');
+          }}
+        />
+      )}
 
-      {
-        view === 'practice' && (
-          <Practice
-            subjects={subjects}
-            sessions={sessions}
-          />
-        )
-      }
+      {view === 'practice' && (
+        <Practice
+          subjects={subjects}
+          sessions={sessions}
+        />
+      )}
 
-      {
-        showNewSessionModal && activeSubjectId && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
-              <h3 className="text-2xl font-bold mb-2">Class Session</h3>
-              <p className="text-black/50 text-sm mb-6">Start recording for {subjects.find(s => s.id === activeSubjectId)?.name}</p>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-black/40 mb-1 block">Session Title</label>
-                <input
-                  type="text"
-                  autoFocus
-                  className="w-full px-4 py-3 rounded-xl border border-black/10 focus:ring-1 focus:ring-black outline-none transition-all"
-                  placeholder="e.g. Week 4: Brand Strategy"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      startSession(activeSubjectId, (e.target as HTMLInputElement).value);
-                      setShowNewSessionModal(false);
-                    }
-                  }}
-                />
-              </div>
-              <div className="mt-8 flex gap-3">
-                <button
-                  onClick={() => setShowNewSessionModal(false)}
-                  className="flex-1 py-3 border border-black/10 rounded-xl text-sm font-semibold hover:bg-black/5 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    const input = document.querySelector('input[placeholder="e.g. Week 4: Brand Strategy"]') as HTMLInputElement;
-                    startSession(activeSubjectId, input.value || 'Untitled Session');
+      {showNewSessionModal && activeSubjectId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-2xl font-bold mb-2">Class Session</h3>
+            <p className="text-black/50 text-sm mb-6">Start recording for {subjects.find(s => s.id === activeSubjectId)?.name}</p>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-black/40 mb-1 block">Session Title</label>
+              <input
+                type="text"
+                autoFocus
+                className="w-full px-4 py-3 rounded-xl border border-black/10 focus:ring-1 focus:ring-black outline-none transition-all"
+                placeholder="e.g. Week 4: Brand Strategy"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleStartSession(activeSubjectId, (e.target as HTMLInputElement).value);
                     setShowNewSessionModal(false);
-                  }}
-                  className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-semibold hover:bg-black/80 transition-all"
-                >
-                  Begin
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* Main Persistent Session View (Full or Mini) */}
-      {
-        activeSessionId && (
-          <div className={view === 'session' ? 'block animate-apple-in' : 'fixed inset-0 pointer-events-none z-[100]'}>
-            <div className={view === 'session' ? '' : 'pointer-events-auto'}>
-              <SessionView
-                session={sessions.find(s => s.id === activeSessionId)!}
-                subject={subjects.find(s => s.id === sessions.find(sess => sess.id === activeSessionId)?.subjectId)!}
-                onBack={() => {
-                  if (activeSubjectId) {
-                    navigateTo('subject_home');
-                  } else {
-                    navigateTo('dashboard');
                   }
                 }}
-                onUpdateSession={updateSession}
-                isMiniMode={view !== 'session'}
-                setIsMiniMode={(mini) => {
-                  if (mini) {
-                    setView('dashboard'); // Or previous view
-                  } else {
-                    setView('session');
-                  }
-                }}
-                onExpand={() => {
-                  setView('session');
-                }}
-                consumeCredits={consumeCredits}
               />
             </div>
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={() => setShowNewSessionModal(false)}
+                className="flex-1 py-3 border border-black/10 rounded-xl text-sm font-semibold hover:bg-black/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const input = document.querySelector('input[placeholder="e.g. Week 4: Brand Strategy"]') as HTMLInputElement;
+                  handleStartSession(activeSubjectId, input.value || 'Untitled Session');
+                  setShowNewSessionModal(false);
+                }}
+                className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-semibold hover:bg-black/80 transition-all"
+              >
+                Begin
+              </button>
+            </div>
           </div>
-        )
-      }
+        </div>
+      )}
 
-
+      {activeSessionId && (
+        <div className={view === 'session' ? 'block animate-apple-in' : 'fixed inset-0 pointer-events-none z-[100]'}>
+          <div className={view === 'session' ? '' : 'pointer-events-auto'}>
+            <SessionView
+              session={sessions.find(s => s.id === activeSessionId)!}
+              subject={subjects.find(s => s.id === sessions.find(sess => sess.id === activeSessionId)?.subjectId)!}
+              onBack={() => {
+                if (activeSubjectId) {
+                  navigateTo('subject_home');
+                } else {
+                  navigateTo('dashboard');
+                }
+              }}
+              onUpdateSession={updateSession}
+              isMiniMode={view !== 'session'}
+              setIsMiniMode={(mini) => {
+                if (mini) {
+                  setView('dashboard');
+                } else {
+                  setView('session');
+                }
+              }}
+              onExpand={() => setView('session')}
+              consumeCredits={consumeCredits}
+            />
+          </div>
+        </div>
+      )}
 
       {view === 'nexus' && activeSessionId && (
         <NexusView
@@ -477,7 +396,7 @@ const App: React.FC = () => {
       {view === 'privacy' && <PrivacyPolicy />}
       {view === 'terms' && <TermsOfService />}
       {view === 'refund_policy' && <RefundPolicy />}
-    </Layout >
+    </Layout>
   );
 };
 

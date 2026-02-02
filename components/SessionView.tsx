@@ -6,12 +6,15 @@ import { callPerplexity, extractKeywords, explainConcept, generateSuggestedQuest
 import QAConsole from './QAConsole';
 // import KnowledgeGraph from './KnowledgeGraph';
 // TODO: Switch to EnhancedKnowledgeGraph after committing D3 to package.json
-import KnowledgeGraph from './EnhancedKnowledgeGraph';
+const KnowledgeGraph = React.lazy(() => import('./EnhancedKnowledgeGraph'));
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
 import UnifiedInput from './UnifiedInput';
 import { Maximize2, FileText, ImageIcon, Play, Plus, Clock, Sparkles, X, Volume2, QrCode } from 'lucide-react';
 import { masterIntelligence } from '../services/intelligence';
+import { CREDIT_COSTS } from '../constants/pricing';
+import { useNotificationStore } from '../stores/useNotificationStore';
+import TranscriptTurnItem from './TranscriptTurnItem';
 
 interface SessionViewProps {
   session: Session;
@@ -34,6 +37,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   onExpand,
   consumeCredits
 }) => {
+  const { addNotification } = useNotificationStore();
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState<TranscriptionTurn[]>(session.turns || []);
   const [concepts, setConcepts] = useState<{ keyword: string; explanation: string; timestamp: number }[]>(session.concepts || []);
@@ -108,6 +112,19 @@ const SessionView: React.FC<SessionViewProps> = ({
   useEffect(() => {
     if (!isRecording) {
       setRecordingStartTime(null);
+      // Ensure cleanup when recording stops manually
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => { });
+        audioContextRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
       return;
     }
 
@@ -134,6 +151,31 @@ const SessionView: React.FC<SessionViewProps> = ({
     return () => clearInterval(interval);
   }, [isRecording, transcription, notes, consoleMessages, subject.name]);
 
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => { });
+        audioContextRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  // Auto-Sync Knowledge Graph (Every 5 turns)
+  useEffect(() => {
+    if (transcription.length > 0 && transcription.length % 5 === 0) {
+      syncKnowledgeGraph();
+    }
+  }, [transcription.length]);
+
   // Smart Transcription Cleanup (Every 2 mins)
   useEffect(() => {
     if (!isRecording || transcription.length < 10) return;
@@ -149,8 +191,9 @@ const SessionView: React.FC<SessionViewProps> = ({
   const syncKnowledgeGraph = async () => {
     if (transcription.length < 5 && consoleMessages.length === 0) return;
     setIsSyncing(true);
+    addNotification('Synchronizing Neural Map...', 'info');
     try {
-      const charged = await consumeCredits(10, 'Knowledge Graph Sync');
+      const charged = await consumeCredits(CREDIT_COSTS.KNOWLEDGE_GRAPH_SYNC, 'Knowledge Graph Sync');
       if (!charged) return;
 
       const fullText = transcription.map(t => t.text).join('\n');
@@ -185,10 +228,12 @@ const SessionView: React.FC<SessionViewProps> = ({
         }
       }
 
+      addNotification('Neural Map Synced Successfully', 'success');
       setConcepts(newConcepts);
       onUpdateSession({ ...session, concepts: newConcepts });
     } catch (e) {
       console.error("Sync failed:", e);
+      addNotification('Neural Sync Failed', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -375,16 +420,19 @@ const SessionView: React.FC<SessionViewProps> = ({
   const handleEndClass = async () => {
     if (isRecording) stopRecording();
     setIsSummarizing(true);
+    addNotification('Synthesizing Session Insights...', 'info');
     const fullText = transcription.map(t => t.text).join(' ');
     try {
-      const charged = await consumeCredits(20, 'Session Synthesis');
+      const charged = await consumeCredits(CREDIT_COSTS.SESSION_SYNTHESIS, 'Session Synthesis');
       if (!charged) return;
 
       const res = await generateSessionInsight(fullText);
       setInsight(res);
+      addNotification('Session Synthesis Complete', 'success');
       onUpdateSession({ ...session, summary: res.summary, examQuestions: res.examQuestions, transcript: fullText });
     } catch (err) {
       console.error(err);
+      addNotification('Synthesis Failed', 'error');
     } finally {
       setIsSummarizing(false);
     }
@@ -526,7 +574,9 @@ const SessionView: React.FC<SessionViewProps> = ({
               <button onClick={() => setGraphModalOpen(true)} className="p-2 hover:bg-black/5 rounded-xl transition-all"><Maximize2 className="w-3.5 h-3.5 opacity-40" /></button>
             </div>
             <div className="h-64 rounded-3xl overflow-hidden bg-black/[0.01]">
-              <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+              <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center text-[10px] font-black uppercase opacity-20">Loading Neural Map...</div>}>
+                <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+              </React.Suspense>
             </div>
             {isSyncing && <p className="text-[8px] font-black uppercase text-center animate-pulse text-[var(--vidyos-teal)]">Mapping Active...</p>}
 
@@ -578,16 +628,7 @@ const SessionView: React.FC<SessionViewProps> = ({
                 </div>
               ) : (
                 transcription.map((turn, i) => (
-                  <div key={i} className={`flex flex-col gap-4 animate-spatial-in ${turn.role === 'system' ? 'opacity-30 scale-95 origin-center' : ''}`}>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[10px] font-black text-[var(--vidyos-teal)] uppercase tracking-widest">{turn.role === 'user' ? 'Stream' : 'Insight'}</span>
-                      <div className="h-[1px] flex-1 bg-gradient-to-r from-black/5 to-transparent shadow-sm" />
-                      <span className="text-[9px] font-bold text-black/20 uppercase">{new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className={`text-xl md:text-2xl font-bold leading-[1.6] tracking-tight ${turn.role === 'user' ? 'text-black font-semibold' : 'text-purple-600 font-medium italic'} break-words`}>
-                      {turn.text}
-                    </div>
-                  </div>
+                  <TranscriptTurnItem key={i} turn={turn} />
                 ))
               )}
               <div ref={transcriptEndRef} />
@@ -676,7 +717,7 @@ const SessionView: React.FC<SessionViewProps> = ({
               <QAConsole
                 suggestedQuestions={suggestedQuestions}
                 onAskAI={async (query) => {
-                  const charged = await consumeCredits(5, 'Neural Doubt Resolution');
+                  const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Neural Doubt Resolution');
                   if (!charged) return "Neural Balance Depleted.";
                   const context = transcription.slice(-30).map(t => t.text).join(' ');
                   return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
@@ -754,7 +795,7 @@ const SessionView: React.FC<SessionViewProps> = ({
           <QAConsole
             suggestedQuestions={suggestedQuestions}
             onAskAI={async (query) => {
-              const charged = await consumeCredits(5, 'Neural Doubt Resolution');
+              const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Neural Doubt Resolution');
               if (!charged) return "Insufficient Neural Balance. Please recharge the protocol.";
 
               const context = transcription.slice(-100).map(t => t.text).join(' ');
@@ -781,7 +822,9 @@ const SessionView: React.FC<SessionViewProps> = ({
         }
       >
         <div className="h-[80vh]">
-          <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+          <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center">Loading Architecture...</div>}>
+            <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+          </React.Suspense>
         </div>
       </ExpandableModal>
     </div>

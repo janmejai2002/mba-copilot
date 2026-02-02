@@ -1,5 +1,6 @@
 /* KaTeX formula styling - must be imported first */
 @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
 
 :root {
     /* 2026 Light "Cloud Dancer" Master Palette */
@@ -60,8 +61,6 @@ html {
     scrollbar-gutter: stable;
     overflow-y: scroll;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
 
 .apple-card,
 .vidyos-card {

@@ -20,7 +20,9 @@ interface LayoutProps {
   tier?: string;
 }
 
-import Background3D from './Background3D';
+const Background3D = React.lazy(() => import('./Background3D'));
+
+import Toast from './Toast';
 
 const Layout: React.FC<LayoutProps> = ({
   children,
@@ -45,7 +47,10 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen selection:bg-[var(--vidyos-teal)] selection:text-white transition-colors duration-700">
-      <Background3D />
+      <React.Suspense fallback={null}>
+        <Background3D />
+      </React.Suspense>
+      <Toast />
 
       <Sidebar
         activeView={activeView}

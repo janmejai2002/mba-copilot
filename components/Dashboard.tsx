@@ -11,6 +11,7 @@ interface DashboardProps {
   onOpenSession: (id: string) => void;
   onOpenSubject: (id: string) => void;
   onDeleteSubject: (id: string) => void;
+  onDeleteSession: (id: string) => void;
   onClearAllSubjects: () => void;
 }
 
@@ -22,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onOpenSession,
   onOpenSubject,
   onDeleteSubject,
+  onDeleteSession,
   onClearAllSubjects
 }) => {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
@@ -198,6 +200,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                     Synthesized
                   </span>
                 )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Permanently delete session "${session.title}"?`)) {
+                      onDeleteSession(session.id);
+                    }
+                  }}
+                  className="p-3 text-black/10 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                  title="Delete Session"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
                 <div className="w-10 h-10 rounded-full border border-[var(--glass-border)] flex items-center justify-center group-hover:bg-[var(--vidyos-teal)] group-hover:text-white transition-all">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
                 </div>
