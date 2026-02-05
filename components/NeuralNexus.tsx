@@ -1,412 +1,499 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import * as d3 from 'd3';
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, RefreshCw, Sparkles, Clock, ChevronDown, Layers3 } from 'lucide-react';
-import { Concept } from '../types';
-import { DepthExpansionService } from '../services/depthExpansion';
+import {
+    Sparkles, Clock, Layers3, Brain, Zap, BookOpen,
+    TrendingUp, Calculator, FileText, Target, RotateCcw,
+    ZoomIn, ZoomOut, Maximize2, Play, Pause
+} from 'lucide-react';
+import { useKnowledgeStore, SemanticNode } from '../stores/useKnowledgeStore';
+import { getMasteryLevel, calculateDecay } from '../services/spaced-repetition';
 
 interface NeuralNexusProps {
-    concepts: Concept[];
-    isSyncing?: boolean;
-    onNodeClick?: (concept: Concept) => void;
-    sessionContext?: string;
+    sessionId?: string;
+    onNodeClick?: (node: SemanticNode) => void;
 }
 
-interface GraphNode extends d3.SimulationNodeDatum {
-    id: string;
-    label: string;
-    explanation: string;
-    category: string;
-    color: string;
-    importance: number;
-    timestamp: number;
-    depth: number;
-    parentId?: string;
-    children?: Concept[];
-    isExpanded: boolean;
-    x?: number;
-    y?: number;
-    z?: number;
-}
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+    concept: <BookOpen className="w-4 h-4" />,
+    formula: <Calculator className="w-4 h-4" />,
+    example: <FileText className="w-4 h-4" />,
+    trend: <TrendingUp className="w-4 h-4" />,
+    definition: <Brain className="w-4 h-4" />
+};
 
-const NeuralNexus: React.FC<NeuralNexusProps> = ({ concepts, isSyncing, onNodeClick, sessionContext = '' }) => {
+const CATEGORY_COLORS: Record<string, string> = {
+    concept: '#14b8a6',
+    formula: '#f59e0b',
+    example: '#10b981',
+    trend: '#8b5cf6',
+    definition: '#3b82f6'
+};
+
+const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<{
         scene: THREE.Scene;
         camera: THREE.PerspectiveCamera;
         renderer: THREE.WebGLRenderer;
         controls: OrbitControls;
-        objects: THREE.Group;
-        lines: THREE.Group;
+        nodeGroup: THREE.Group;
+        lineGroup: THREE.Group;
+        animationId: number;
     } | null>(null);
 
-    const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-    const [timelinePosition, setTimelinePosition] = useState(100); // 0-100%
-    const [isExpanding, setIsExpanding] = useState(false);
-    const [expandedConcepts, setExpandedConcepts] = useState<Map<string, Concept>>(new Map());
+    const { nodes, getStats, getDueNodes, reviewNode, buildConnections, isProcessing } = useKnowledgeStore();
+    const [selectedNode, setSelectedNode] = useState<SemanticNode | null>(null);
+    const [isAutoRotate, setIsAutoRotate] = useState(true);
+    const [viewMode, setViewMode] = useState<'3d' | 'mastery' | 'timeline'>('3d');
+    const [showDueOnly, setShowDueOnly] = useState(false);
 
-    // Temporal filtering
-    const filteredConcepts = useMemo(() => {
-        if (concepts.length === 0) return [];
-        const minTime = Math.min(...concepts.map(c => c.timestamp));
-        const maxTime = Math.max(...concepts.map(c => c.timestamp));
-        const cutoffTime = minTime + ((maxTime - minTime) * timelinePosition / 100);
-        return concepts.filter(c => c.timestamp <= cutoffTime);
-    }, [concepts, timelinePosition]);
+    const stats = getStats();
+    const dueNodes = getDueNodes();
 
-    // Process concepts into nodes
-    const nodes: GraphNode[] = useMemo(() => {
-        const allNodes: GraphNode[] = [];
-
-        filteredConcepts.forEach((c, i) => {
-            const expanded = expandedConcepts.get(c.keyword);
-            const nodeData = expanded || c;
-
-            allNodes.push({
-                id: `node-${i}`,
-                label: nodeData.keyword,
-                explanation: nodeData.explanation,
-                category: nodeData.category || 'concept',
-                color: getColorByCategory(nodeData.category || 'concept'),
-                importance: 1 + (nodeData.depth || 0) * 0.5,
-                timestamp: nodeData.timestamp,
-                depth: nodeData.depth || 0,
-                parentId: nodeData.parentId,
-                children: nodeData.children,
-                isExpanded: nodeData.isExpanded || false,
-                x: (Math.random() - 0.5) * 400,
-                y: (Math.random() - 0.5) * 400,
-                z: (Math.random() - 0.5) * 400
-            });
-
-            // Add child nodes if expanded
-            if (nodeData.children && nodeData.children.length > 0) {
-                nodeData.children.forEach((child, childIdx) => {
-                    allNodes.push({
-                        id: `node-${i}-child-${childIdx}`,
-                        label: child.keyword,
-                        explanation: child.explanation,
-                        category: child.category || 'concept',
-                        color: getColorByCategory(child.category || 'concept'),
-                        importance: 1 + (child.depth || 0) * 0.5,
-                        timestamp: child.timestamp,
-                        depth: child.depth || 0,
-                        parentId: child.parentId,
-                        children: child.children,
-                        isExpanded: child.isExpanded || false,
-                        x: (Math.random() - 0.5) * 400,
-                        y: (Math.random() - 0.5) * 400,
-                        z: (Math.random() - 0.5) * 400
-                    });
-                });
-            }
-        });
-
-        return allNodes;
-    }, [filteredConcepts, expandedConcepts]);
-
-    const links = useMemo(() => {
-        const l = [];
-        for (let i = 0; i < nodes.length; i++) {
-            // Connect to parent
-            if (nodes[i].parentId) {
-                const parent = nodes.find(n => n.label === nodes[i].parentId);
-                if (parent) {
-                    l.push({ source: parent.id, target: nodes[i].id });
-                }
-            }
-            // Sequential connections for root nodes
-            if (i > 0 && !nodes[i].parentId && !nodes[i - 1].parentId) {
-                l.push({ source: nodes[i - 1].id, target: nodes[i].id });
-            }
-            // Random cross-links
-            if (i > 2 && Math.random() > 0.7 && !nodes[i].parentId) {
-                l.push({ source: nodes[i].id, target: nodes[Math.floor(Math.random() * i)].id });
-            }
+    // Convert Map to array for rendering
+    const nodeArray = useMemo(() => {
+        const arr = Array.from(nodes.values());
+        if (showDueOnly) {
+            const dueIds = new Set(dueNodes.map(n => n.id));
+            return arr.filter(n => dueIds.has(n.id));
         }
-        return l;
-    }, [nodes]);
+        return arr;
+    }, [nodes, showDueOnly, dueNodes]);
 
-    const handleExpandNode = async (node: GraphNode) => {
-        if (node.isExpanded || node.depth >= 3) return;
-
-        setIsExpanding(true);
-        try {
-            const concept: Concept = {
-                keyword: node.label,
-                explanation: node.explanation,
-                timestamp: node.timestamp,
-                depth: node.depth,
-                category: node.category as any
-            };
-
-            const children = await DepthExpansionService.expandConcept({
-                concept,
-                targetDepth: node.depth + 1,
-                sessionContext
-            });
-
-            const expandedConcept: Concept = {
-                ...concept,
-                children,
-                isExpanded: true
-            };
-
-            setExpandedConcepts(prev => new Map(prev).set(node.label, expandedConcept));
-        } catch (error) {
-            console.error('Expansion failed:', error);
-        } finally {
-            setIsExpanding(false);
-        }
-    };
-
-    function getColorByCategory(category: string): string {
-        const colors: Record<string, string> = {
-            formula: '#f59e0b',
-            trend: '#8b5cf6',
-            example: '#10b981',
-            concept: '#14b8a6',
-            definition: '#3b82f6'
-        };
-        return colors[category] || '#14b8a6';
-    }
-
+    // Initialize Three.js scene
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // --- SCENE SETUP ---
+        const container = containerRef.current;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color('#000005');
-        scene.fog = new THREE.FogExp2('#000005', 0.001);
+        scene.background = new THREE.Color('#030712');
+        scene.fog = new THREE.FogExp2('#030712', 0.0008);
 
-        const camera = new THREE.PerspectiveCamera(75, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 5000);
-        camera.position.z = 800;
+        // Camera
+        const camera = new THREE.PerspectiveCamera(60, width / height, 1, 5000);
+        camera.position.set(0, 0, 500);
 
+        // Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        containerRef.current.appendChild(renderer.domElement);
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
 
+        // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.autoRotate = isAutoRotate;
+        controls.autoRotateSpeed = 0.5;
 
-        const objects = new THREE.Group();
-        const lines = new THREE.Group();
-        scene.add(objects);
-        scene.add(lines);
+        // Node and Line groups
+        const nodeGroup = new THREE.Group();
+        const lineGroup = new THREE.Group();
+        scene.add(nodeGroup);
+        scene.add(lineGroup);
 
-        // --- ATMOSPHERE (STARS) ---
-        const starGeo = new THREE.BufferGeometry();
-        const starCoords = [];
-        for (let i = 0; i < 2000; i++) {
-            starCoords.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
+        // Ambient starfield
+        const starGeometry = new THREE.BufferGeometry();
+        const starPositions = [];
+        for (let i = 0; i < 3000; i++) {
+            starPositions.push(
+                (Math.random() - 0.5) * 4000,
+                (Math.random() - 0.5) * 4000,
+                (Math.random() - 0.5) * 4000
+            );
         }
-        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true, opacity: 0.5 });
-        scene.add(new THREE.Points(starGeo, starMat));
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 1,
+            transparent: true,
+            opacity: 0.4
+        });
+        scene.add(new THREE.Points(starGeometry, starMaterial));
 
-        // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0x404040, 2);
-        scene.add(ambientLight);
+        // Lighting
+        scene.add(new THREE.AmbientLight(0x404040, 1.5));
         const pointLight = new THREE.PointLight(0x14b8a6, 2, 1000);
+        pointLight.position.set(100, 100, 100);
         scene.add(pointLight);
 
-        sceneRef.current = { scene, camera, renderer, controls, objects, lines };
+        const pointLight2 = new THREE.PointLight(0xf59e0b, 1, 800);
+        pointLight2.position.set(-100, -100, 50);
+        scene.add(pointLight2);
 
-        // --- D3 FORCE SIMULATION (3D) ---
-        const simulation = d3.forceSimulation<GraphNode>(nodes)
-            .force('link', d3.forceLink(links).id((d: any) => d.id).distance(150))
-            .force('charge', d3.forceManyBody().strength(-300))
-            .force('center', d3.forceCenter(0, 0))
-            .on('tick', () => {
-                nodes.forEach(node => {
-                    if (node.z === undefined) node.z = (Math.random() - 0.5) * 200;
-                    node.z += (Math.random() - 0.5) * 2;
+        // Store references
+        sceneRef.current = { scene, camera, renderer, controls, nodeGroup, lineGroup, animationId: 0 };
 
-                    const mesh = objects.children.find(m => (m as any).nodeId === node.id);
-                    if (mesh) {
-                        mesh.position.set(node.x || 0, node.y || 0, node.z || 0);
-                    }
-                });
-
-                lines.clear();
-                links.forEach(link => {
-                    const source = nodes.find(n => n.id === ((link.source as any).id || link.source));
-                    const target = nodes.find(n => n.id === ((link.target as any).id || link.target));
-                    if (source && target) {
-                        const geometry = new THREE.BufferGeometry().setFromPoints([
-                            new THREE.Vector3(source.x || 0, source.y || 0, source.z || 0),
-                            new THREE.Vector3(target.x || 0, target.y || 0, target.z || 0)
-                        ]);
-                        const material = new THREE.LineBasicMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.2 });
-                        lines.add(new THREE.Line(geometry, material));
-                    }
-                });
-            });
-
-        // --- CREATE MESHES ---
-        nodes.forEach(node => {
-            const geometry = new THREE.SphereGeometry(node.importance * 3, 32, 32);
-            const material = new THREE.MeshPhongMaterial({
-                color: node.color,
-                emissive: node.color,
-                emissiveIntensity: 0.5,
-                shininess: 100
-            });
-            const mesh = new THREE.Mesh(geometry, material);
-            (mesh as any).nodeId = node.id;
-            mesh.position.set(node.x || 0, node.y || 0, node.z || 0);
-            objects.add(mesh);
-
-            // Add glow ring
-            const ringGeo = new THREE.TorusGeometry(node.importance * 4, 0.2, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({ color: node.color, transparent: true, opacity: 0.3 });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.random() * Math.PI;
-            mesh.add(ring);
-        });
-
-        // --- ANIMATION LOOP ---
+        // Animation loop
         const animate = () => {
             if (!sceneRef.current) return;
-            requestAnimationFrame(animate);
+            sceneRef.current.animationId = requestAnimationFrame(animate);
+
             controls.update();
 
-            objects.children.forEach(mesh => {
-                mesh.children.forEach(child => {
-                    child.rotation.y += 0.01;
-                });
+            // Gentle node oscillation
+            nodeGroup.children.forEach((mesh, i) => {
+                mesh.position.y += Math.sin(Date.now() * 0.001 + i) * 0.02;
+                mesh.rotation.y += 0.002;
             });
 
             renderer.render(scene, camera);
         };
         animate();
 
-        // --- INTERACTION ---
+        // Raycaster for interaction
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
         const onMouseMove = (event: MouseEvent) => {
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (rect) {
-                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            }
+            const rect = container.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         };
 
         const onClick = () => {
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(objects.children);
+            const intersects = raycaster.intersectObjects(nodeGroup.children);
+
             if (intersects.length > 0) {
-                const nodeId = (intersects[0].object as any).nodeId;
-                const node = nodes.find(n => n.id === nodeId);
+                const nodeId = (intersects[0].object as any).userData?.nodeId;
+                const node = nodes.get(nodeId);
                 if (node) {
                     setSelectedNode(node);
-                    if (onNodeClick) {
-                        const concept: Concept = {
-                            keyword: node.label,
-                            explanation: node.explanation,
-                            timestamp: node.timestamp,
-                            depth: node.depth,
-                            category: node.category as any
-                        };
-                        onNodeClick(concept);
-                    }
+                    onNodeClick?.(node);
                 }
             } else {
                 setSelectedNode(null);
             }
         };
 
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('click', onClick);
+        container.addEventListener('mousemove', onMouseMove);
+        container.addEventListener('click', onClick);
+
+        // Resize handler
+        const onResize = () => {
+            if (!containerRef.current) return;
+            const w = containerRef.current.clientWidth;
+            const h = containerRef.current.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        };
+        window.addEventListener('resize', onResize);
 
         return () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('click', onClick);
-            simulation.stop();
-            renderer.dispose();
-            if (containerRef.current) {
-                containerRef.current.innerHTML = '';
+            container.removeEventListener('mousemove', onMouseMove);
+            container.removeEventListener('click', onClick);
+            window.removeEventListener('resize', onResize);
+
+            if (sceneRef.current) {
+                cancelAnimationFrame(sceneRef.current.animationId);
+                sceneRef.current.renderer.dispose();
             }
+            container.innerHTML = '';
         };
-    }, [nodes, links]);
+    }, []);
+
+    // Update auto-rotate
+    useEffect(() => {
+        if (sceneRef.current) {
+            sceneRef.current.controls.autoRotate = isAutoRotate;
+        }
+    }, [isAutoRotate]);
+
+    // Update nodes in scene
+    useEffect(() => {
+        if (!sceneRef.current) return;
+
+        const { nodeGroup, lineGroup } = sceneRef.current;
+
+        // Clear existing
+        nodeGroup.clear();
+        lineGroup.clear();
+
+        // Position nodes in 3D space
+        const positions = new Map<string, THREE.Vector3>();
+        const nodeList = nodeArray;
+
+        nodeList.forEach((node, i) => {
+            const phi = Math.acos(-1 + (2 * i) / nodeList.length);
+            const theta = Math.sqrt(nodeList.length * Math.PI) * phi;
+            const radius = 200 + node.depth * 50;
+
+            const x = radius * Math.cos(theta) * Math.sin(phi);
+            const y = radius * Math.sin(theta) * Math.sin(phi);
+            const z = radius * Math.cos(phi);
+
+            positions.set(node.id, new THREE.Vector3(x, y, z));
+
+            // Node size based on mastery
+            const mastery = calculateDecay(node.srs);
+            const baseSize = 8 + node.connections.length * 2;
+            const size = baseSize * (0.5 + mastery * 0.5);
+
+            // Color based on category and mastery
+            const categoryColor = new THREE.Color(CATEGORY_COLORS[node.category] || '#14b8a6');
+            const masteryLevel = getMasteryLevel(mastery);
+
+            // Create node mesh
+            const geometry = new THREE.SphereGeometry(size, 32, 32);
+            const material = new THREE.MeshPhongMaterial({
+                color: categoryColor,
+                emissive: categoryColor,
+                emissiveIntensity: 0.3 + mastery * 0.4,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.5 + mastery * 0.5
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            (mesh as any).userData = { nodeId: node.id };
+            nodeGroup.add(mesh);
+
+            // Add glowing ring for mastered nodes
+            if (mastery >= 0.7) {
+                const ringGeometry = new THREE.TorusGeometry(size * 1.5, 0.5, 16, 100);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x10b981,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                mesh.add(ring);
+            }
+
+            // Add pulsing core for due items
+            if (node.srs.nextReview <= Date.now()) {
+                const coreGeometry = new THREE.SphereGeometry(size * 0.3, 16, 16);
+                const coreMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xef4444,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const core = new THREE.Mesh(coreGeometry, coreMaterial);
+                mesh.add(core);
+            }
+        });
+
+        // Draw connections
+        nodeList.forEach(node => {
+            const sourcePos = positions.get(node.id);
+            if (!sourcePos) return;
+
+            node.connections.forEach(conn => {
+                const targetPos = positions.get(conn.targetId);
+                if (!targetPos) return;
+
+                const geometry = new THREE.BufferGeometry().setFromPoints([sourcePos, targetPos]);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0x14b8a6,
+                    transparent: true,
+                    opacity: 0.1 + conn.strength * 0.3
+                });
+                lineGroup.add(new THREE.Line(geometry, material));
+            });
+        });
+    }, [nodeArray]);
+
+    const handleReview = (quality: 0 | 1 | 2 | 3 | 4 | 5) => {
+        if (selectedNode) {
+            reviewNode(selectedNode.id, quality);
+            setSelectedNode(null);
+        }
+    };
+
+    const handleRebuildConnections = async () => {
+        await buildConnections();
+    };
 
     return (
-        <div className="relative w-full h-full min-h-[500px] bg-black overflow-hidden rounded-[2.5rem]">
+        <div className="relative w-full h-full min-h-[600px] bg-[#030712] overflow-hidden rounded-3xl">
+            {/* 3D Canvas Container */}
             <div ref={containerRef} className="w-full h-full" />
 
-            {/* HUD Overlay */}
-            <div className="absolute top-8 left-8 pointer-events-none">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-[var(--vidyos-teal)] mb-2">Neural Nexus 3.0</h3>
-                <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Temporal 4-Layer Intelligence Graph</p>
-            </div>
+            {/* Top HUD */}
+            <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none">
+                <div>
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--vidyos-teal)] mb-1 flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        Neural Nexus 4.0
+                    </h3>
+                    <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                        Semantic Knowledge Graph • Spaced Repetition
+                    </p>
+                </div>
 
-            {/* Temporal Timeline */}
-            <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-2xl px-8 pointer-events-auto">
-                <div className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                        <Clock className="w-4 h-4 text-[var(--vidyos-teal)]" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Thought Progression</span>
-                        <span className="ml-auto text-[10px] font-black text-[var(--vidyos-teal)]">{Math.round(timelinePosition)}%</span>
+                <div className="flex items-center gap-3 pointer-events-auto">
+                    {/* View mode selector */}
+                    <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
+                        {(['3d', 'mastery', 'timeline'] as const).map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => setViewMode(mode)}
+                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === mode ? 'bg-[var(--vidyos-teal)] text-white' : 'text-white/40 hover:text-white/70'
+                                    }`}
+                            >
+                                {mode}
+                            </button>
+                        ))}
                     </div>
-                    <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={timelinePosition}
-                        onChange={(e) => setTimelinePosition(Number(e.target.value))}
-                        className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[var(--vidyos-teal)]"
-                    />
-                </div>
-            </div>
 
-            <div className="absolute bottom-8 right-8 flex gap-4">
-                <button className="p-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl hover:bg-white/20 transition-all">
-                    <Sparkles className="w-4 h-4 text-[var(--vidyos-teal)]" />
-                </button>
-                <div className="flex items-center gap-2 px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
-                    <div className="w-2 h-2 bg-[var(--vidyos-teal)] rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{nodes.length} Neural Nodes</span>
-                </div>
-            </div>
-
-            {selectedNode && (
-                <div className="absolute top-1/2 left-8 -translate-y-1/2 w-80 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-8 animate-apple-in shadow-2xl">
-                    <button onClick={() => setSelectedNode(null)} className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-xl">
-                        <Minimize2 className="w-3 h-3 text-white/40" />
+                    {/* Auto-rotate toggle */}
+                    <button
+                        onClick={() => setIsAutoRotate(!isAutoRotate)}
+                        className={`p-2 rounded-xl border transition-all ${isAutoRotate ? 'bg-[var(--vidyos-teal)]/20 border-[var(--vidyos-teal)]/50' : 'bg-white/5 border-white/10'
+                            }`}
+                        title="Auto-rotate"
+                    >
+                        {isAutoRotate ? <Pause className="w-4 h-4 text-[var(--vidyos-teal)]" /> : <Play className="w-4 h-4 text-white/40" />}
                     </button>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.5)]" style={{ backgroundColor: selectedNode.color }}>
-                            <Sparkles className="w-5 h-5 text-white" />
+
+                    {/* Rebuild connections */}
+                    <button
+                        onClick={handleRebuildConnections}
+                        disabled={isProcessing}
+                        className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
+                        title="Rebuild connections"
+                    >
+                        <RotateCcw className={`w-4 h-4 text-white/40 ${isProcessing ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Stats Bar */}
+            <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end pointer-events-none">
+                <div className="flex gap-4 pointer-events-auto">
+                    {/* Stats cards */}
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-3">
+                        <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest mb-1">Total Nodes</div>
+                        <div className="text-2xl font-black text-white">{stats.total}</div>
+                    </div>
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-3">
+                        <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest mb-1">Mastered</div>
+                        <div className="text-2xl font-black text-green-400">{stats.mastered}</div>
+                    </div>
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-3">
+                        <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest mb-1">Due Now</div>
+                        <div className="text-2xl font-black text-red-400">{stats.dueNow}</div>
+                    </div>
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-3">
+                        <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest mb-1">Avg Mastery</div>
+                        <div className="text-2xl font-black text-[var(--vidyos-teal)]">{Math.round(stats.averageMastery * 100)}%</div>
+                    </div>
+                </div>
+
+                {/* Filter toggle */}
+                <button
+                    onClick={() => setShowDueOnly(!showDueOnly)}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all pointer-events-auto ${showDueOnly
+                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                        }`}
+                >
+                    <Target className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                        {showDueOnly ? 'Showing Due' : 'Show Due Only'}
+                    </span>
+                </button>
+            </div>
+
+            {/* Legend */}
+            <div className="absolute top-24 left-6 space-y-2 pointer-events-none">
+                {Object.entries(CATEGORY_COLORS).map(([category, color]) => (
+                    <div key={category} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                        <span className="text-[9px] text-white/40 font-bold uppercase tracking-widest capitalize">{category}</span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Selected Node Panel */}
+            {selectedNode && (
+                <div className="absolute top-1/2 right-6 -translate-y-1/2 w-80 bg-black/60 backdrop-blur-xl border border-white/20 rounded-3xl p-6 animate-in slide-in-from-right duration-300 pointer-events-auto">
+                    <div className="flex items-start gap-3 mb-4">
+                        <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center"
+                            style={{ backgroundColor: CATEGORY_COLORS[selectedNode.category] }}
+                        >
+                            {CATEGORY_ICONS[selectedNode.category]}
                         </div>
-                        <div>
-                            <h4 className="text-white font-black text-lg tracking-tight">{selectedNode.label}</h4>
-                            <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                            <h4 className="text-white font-black text-lg leading-tight">{selectedNode.label}</h4>
+                            <div className="flex items-center gap-2 mt-1">
                                 <Layers3 className="w-3 h-3 text-[var(--vidyos-teal)]" />
-                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--vidyos-teal)]">Depth {selectedNode.depth}</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--vidyos-teal)]">
+                                    Depth {selectedNode.depth}
+                                </span>
+                                <span className="text-white/20">•</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                                    {selectedNode.connections.length} connections
+                                </span>
                             </div>
                         </div>
                     </div>
-                    <p className="text-white/70 text-sm leading-relaxed mb-6 font-medium">
+
+                    <p className="text-white/70 text-sm leading-relaxed mb-4">
                         {selectedNode.explanation}
                     </p>
-                    {selectedNode.depth < 3 && !selectedNode.isExpanded && (
-                        <button
-                            onClick={() => handleExpandNode(selectedNode)}
-                            disabled={isExpanding}
-                            className="w-full py-3 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all flex items-center justify-center gap-2"
-                        >
-                            {isExpanding ? 'Expanding...' : <><ChevronDown className="w-4 h-4" /> Drill Deeper</>}
-                        </button>
-                    )}
-                    {selectedNode.children && selectedNode.children.length > 0 && (
-                        <div className="mt-4 text-[9px] text-white/40 font-bold uppercase tracking-widest">
-                            {selectedNode.children.length} Sub-Concepts Loaded
+
+                    {/* Mastery bar */}
+                    <div className="mb-4">
+                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-2">
+                            <span className="text-white/40">Mastery</span>
+                            <span className="text-[var(--vidyos-teal)]">{Math.round(selectedNode.srs.mastery * 100)}%</span>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-[var(--vidyos-teal)] to-green-400 transition-all duration-500"
+                                style={{ width: `${selectedNode.srs.mastery * 100}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Review buttons */}
+                    {selectedNode.srs.nextReview <= Date.now() && (
+                        <div className="space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-2">⚡ Due for Review</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button onClick={() => handleReview(1)} className="py-2 bg-red-500/20 text-red-400 rounded-xl text-[9px] font-black uppercase hover:bg-red-500/30 transition-all">
+                                    Forgot
+                                </button>
+                                <button onClick={() => handleReview(3)} className="py-2 bg-yellow-500/20 text-yellow-400 rounded-xl text-[9px] font-black uppercase hover:bg-yellow-500/30 transition-all">
+                                    Hard
+                                </button>
+                                <button onClick={() => handleReview(5)} className="py-2 bg-green-500/20 text-green-400 rounded-xl text-[9px] font-black uppercase hover:bg-green-500/30 transition-all">
+                                    Easy
+                                </button>
+                            </div>
                         </div>
                     )}
+
+                    {selectedNode.srs.nextReview > Date.now() && (
+                        <div className="flex items-center gap-2 text-[9px] text-white/40">
+                            <Clock className="w-3 h-3" />
+                            <span className="font-bold uppercase tracking-widest">
+                                Next review: {new Date(selectedNode.srs.nextReview).toLocaleDateString()}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Empty state */}
+            {nodeArray.length === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
+                    <Brain className="w-16 h-16 text-white/10 mb-4" />
+                    <h3 className="text-xl font-black text-white/30 mb-2">No Knowledge Nodes Yet</h3>
+                    <p className="text-sm text-white/20 max-w-md">
+                        Start a learning session to populate your neural knowledge graph. Concepts will appear here with semantic connections and spaced repetition tracking.
+                    </p>
                 </div>
             )}
         </div>
