@@ -33,6 +33,69 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
     strength: number;
 }
 
+// Helper to render text with inline and block formulas
+const renderTextWithFormulas = (text: string) => {
+    try {
+        let processedText = text
+            .replace(/\$(\d)/g, '\\$$$1')
+            .replace(/\[\d+\]/g, '')
+            .replace(/\(\(\s*([^)]+)\s*\)\)/g, (match, formula) => {
+                if (/[=+\-*/_^]/.test(formula)) return `$$${formula}$$`;
+                return `(${formula})`;
+            })
+            .replace(/\b([a-zA-Z])_([a-zA-Z0-9])\b/g, '$1_{$2}');
+
+        const parts: React.ReactNode[] = [];
+        let currentIndex = 0;
+        const formulaRegex = /(\$\$[^$]+\$\$|\$(?!\s)(?:\\.|[^$])+(?<!\s)\$)/g;
+        let match;
+
+        while ((match = formulaRegex.exec(processedText)) !== null) {
+            if (match.index > currentIndex) {
+                parts.push(<span key={`text-${currentIndex}`}>{processedText.substring(currentIndex, match.index)}</span>);
+            }
+
+            const formula = match[0];
+            const isBlock = formula.startsWith('$$');
+            const mathContent = isBlock ? formula.slice(2, -2) : formula.slice(1, -1);
+
+            if (!isBlock && /^\d+(\.\d+)?$/.test(mathContent)) {
+                parts.push(<span key={`currency-${match.index}`}>{formula}</span>);
+                currentIndex = match.index + formula.length;
+                continue;
+            }
+
+            try {
+                const html = katex.renderToString(mathContent, {
+                    displayMode: isBlock,
+                    throwOnError: false,
+                    strict: false
+                });
+
+                parts.push(
+                    <span
+                        key={match.index}
+                        dangerouslySetInnerHTML={{ __html: html }}
+                        className={isBlock ? 'block my-2' : 'inline-block mx-1'}
+                    />
+                );
+            } catch (e) {
+                parts.push(<span key={match.index}>{formula}</span>);
+            }
+
+            currentIndex = match.index + formula.length;
+        }
+
+        if (currentIndex < processedText.length) {
+            parts.push(processedText.substring(currentIndex));
+        }
+
+        return parts.length > 0 ? parts : processedText;
+    } catch (error) {
+        return text;
+    }
+};
+
 // Categorize concepts
 const categorizeConcept = (keyword: string, explanation: string) => {
     const lower = (keyword + ' ' + explanation).toLowerCase();
@@ -641,9 +704,9 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                             </div>
                         </div>
                     </div>
-                    <p className="text-sm text-black/70 leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar">
-                        {selectedNode.explanation}
-                    </p>
+                    <div className="text-sm text-black/70 leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {renderTextWithFormulas(selectedNode.explanation)}
+                    </div>
                 </div>
             )}
 

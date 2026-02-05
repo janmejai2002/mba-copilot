@@ -72,11 +72,13 @@ html {
     padding: 32px;
     box-shadow: var(--shadow-premium);
     transition: all 0.6s var(--ease-ios);
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .apple-card:hover,
 .vidyos-card:hover {
-    transform: translateY(-8px) scale(1.01);
+    transform: translateY(-8px) scale(1.01) translateZ(0);
     background: rgba(255, 255, 255, 0.85);
     /* Slightly more opaque for better contrast */
     border-color: var(--vidyos-teal-glow);
@@ -640,4 +642,69 @@ html {
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===========================================
+   ACCESSIBILITY - Focus States & Contrast
+   =========================================== */
+
+/* Global focus-visible styles */
+*:focus-visible {
+    outline: 2px solid var(--vidyos-teal);
+    outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--vidyos-teal);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Skip to content link for screen readers */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: var(--text-main);
+    color: white;
+    font-weight: bold;
+    z-index: 9999;
+    border-radius: 8px;
+}
+
+.skip-link:focus {
+    top: 16px;
+}
+
+/* Improved text contrast for accessibility */
+.text-accessible-muted {
+    color: var(--text-muted);
+    opacity: 0.8;
+    /* Minimum contrast ratio */
+}
+
+/* ===========================================
+   REDUCED MOTION - Accessibility
+   =========================================== */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .apple-card:hover,
+    .vidyos-card:hover {
+        transform: none;
+    }
 }

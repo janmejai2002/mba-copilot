@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Subject, Session } from '../types';
-import { Share2, Maximize2, Zap, BookOpen, Clock, Activity } from 'lucide-react';
+import { BookOpen, Activity } from 'lucide-react';
 
 interface SubjectGraphProps {
     subject: Subject;

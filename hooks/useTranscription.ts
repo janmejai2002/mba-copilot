@@ -1,6 +1,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { TranscriptionTurn } from '../types';
+import { useBackgroundStore } from '../stores/useBackgroundStore';
 
 export function useTranscription(onTranscriptReceived: (text: string) => void) {
     const [isRecording, setIsRecording] = useState(false);
@@ -8,6 +9,9 @@ export function useTranscription(onTranscriptReceived: (text: string) => void) {
     const [volumeBoost, setVolumeBoost] = useState(1.0);
     const [skipSilence, setSkipSilence] = useState(false);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+
+    // Background state for organic animations
+    const setBackgroundState = useBackgroundStore(state => state.setState);
 
     const socketRef = useRef<WebSocket | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -24,6 +28,7 @@ export function useTranscription(onTranscriptReceived: (text: string) => void) {
     const stopRecording = useCallback(() => {
         setIsRecording(false);
         setIsPaused(false);
+        setBackgroundState('idle'); // Reset background to calm state
 
         if (socketRef.current) {
             socketRef.current.close();
@@ -71,6 +76,7 @@ export function useTranscription(onTranscriptReceived: (text: string) => void) {
 
             socket.onopen = () => {
                 setIsRecording(true);
+                setBackgroundState('recording'); // Activate recording visuals
                 const source = audioContext.createMediaStreamSource(stream);
                 const analyserNode = audioContext.createAnalyser();
                 analyserNode.fftSize = 256;

@@ -9,10 +9,11 @@ import SessionControls from './SessionControls';
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
 import UnifiedInput from './UnifiedInput';
-import { Maximize2, Sparkles, X, QrCode } from 'lucide-react';
+import { Maximize2, Sparkles, X } from 'lucide-react';
 import { masterIntelligence } from '../services/intelligence';
 import { CREDIT_COSTS } from '../constants/pricing';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { useBackgroundStore } from '../stores/useBackgroundStore';
 import { useTranscription } from '../hooks/useTranscription';
 import { useSessionSync } from '../hooks/useSessionSync';
 
@@ -40,6 +41,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   consumeCredits
 }) => {
   const { addNotification } = useNotificationStore();
+  const setBackgroundState = useBackgroundStore(state => state.setState);
 
   // High-level Domain State
   const [transcription, setTranscription] = useState<TranscriptionTurn[]>(session.turns || []);
@@ -99,6 +101,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   const syncKnowledgeGraph = async () => {
     if (transcription.length < 5 && consoleMessages.length === 0) return;
     setIsSyncing(true);
+    setBackgroundState('syncing'); // Activate syncing visuals
     addNotification('Synchronizing Neural Map...', 'info');
     try {
       const charged = await consumeCredits(CREDIT_COSTS.KNOWLEDGE_GRAPH_SYNC, 'Knowledge Graph Sync');
@@ -111,9 +114,13 @@ const SessionView: React.FC<SessionViewProps> = ({
       const keywords = await extractKeywords(prompt);
       const newConcepts = [...concepts];
 
-      for (const resItem of (keywords as any)) {
+      // Type-safe iteration over extracted keywords
+      interface ExtractedKeyword { keyword: string; explanation: string; theme?: string; }
+      const typedKeywords = keywords as (string | ExtractedKeyword)[];
+
+      for (const resItem of typedKeywords) {
         const kw = typeof resItem === 'string' ? resItem : resItem.keyword;
-        if (!newConcepts.some(c => c.keyword.toLowerCase() === kw.toLowerCase())) {
+        if (kw && !newConcepts.some(c => c.keyword.toLowerCase() === kw.toLowerCase())) {
           const explanation = typeof resItem === 'string' ? await explainConcept(kw, fullText) : resItem.explanation;
           newConcepts.push({ keyword: kw, explanation, timestamp: Date.now() });
         }
@@ -125,6 +132,7 @@ const SessionView: React.FC<SessionViewProps> = ({
       addNotification('Neural Sync Failed', 'error');
     } finally {
       setIsSyncing(false);
+      setBackgroundState('idle'); // Return to calm state
     }
   };
 
@@ -263,23 +271,17 @@ const SessionView: React.FC<SessionViewProps> = ({
         </main>
 
         <aside className="lg:col-span-3 space-y-6 order-3">
-          <div className="glass-card-2026 p-0 overflow-hidden min-h-[400px] flex flex-col">
-            <div className="p-5 border-b border-black/5 flex justify-between items-center bg-[#fbfbfd]">
-              <span className="label-caps mb-0 text-black/40 text-[9px]">Doubt Resolver</span>
-              <button onClick={() => setConsoleModalOpen(true)} className="p-1.5 hover:bg-black/5 rounded-lg"><Maximize2 className="w-3 h-3 opacity-40" /></button>
-            </div>
-            <QAConsole
-              suggestedQuestions={suggestedQuestions}
-              messages={consoleMessages}
-              onMessagesChange={setConsoleMessages}
-              onAskAI={async (query) => {
-                const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Doubt Resolution');
-                if (!charged) return "Insufficient credits.";
-                const context = transcription.slice(-10).map(t => t.text).join(' ');
-                return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
-              }}
-            />
-          </div>
+          <QAConsole
+            suggestedQuestions={suggestedQuestions}
+            messages={consoleMessages}
+            onMessagesChange={setConsoleMessages}
+            onAskAI={async (query) => {
+              const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Doubt Resolution');
+              if (!charged) return "Insufficient credits.";
+              const context = transcription.slice(-10).map(t => t.text).join(' ');
+              return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+            }}
+          />
           {insight && (
             <div className="glass-card-2026 p-6 bg-gradient-to-br from-purple-600/10 to-transparent border-purple-500/20">
               <Sparkles className="w-4 h-4 text-purple-600 opacity-20 mb-3" />
@@ -309,6 +311,7 @@ const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </ExpandableModal>
     </div>
+
   );
 };
 

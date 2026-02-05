@@ -43,7 +43,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user });
     },
     setShowAuth: (show) => set({ showAuth: show }),
-    setShowOnboarding: (show) => set({ showOnboarding: show }),
+    setShowOnboarding: (show) => {
+        if (!show) {
+            localStorage.setItem('vidyos_onboarding_complete', 'true');
+        }
+        set({ showOnboarding: show });
+    },
     setIsSovereign: (isSovereign) => set({ isSovereign }),
     logout: () => {
         localStorage.removeItem('vidyos_user');

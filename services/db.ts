@@ -83,7 +83,7 @@ const syncToDrive = async () => {
                 authErrorCallback();
             }
         }
-    }, 5000); // 5 second debounce
+    }, 30000); // 30 second debounce
 };
 
 // Listen for tab close

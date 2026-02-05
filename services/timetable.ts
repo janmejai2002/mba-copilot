@@ -115,31 +115,29 @@ export async function syncTimetable() {
                     // Clean up potential stray quotes and non-alpha junk from start/end
                     subjectCode = subjectCode.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
 
-                    // Filter out date-like strings and miscellaneous junk
-                    const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectCode);
-                    const isJunk = /^(Act|Activity|Holiday|No Class|TBD|Vacation)$/i.test(subjectCode);
-
-                    // Filter short codes like OPR, HRM, BRM, BOB2, etc.
-                    const isShortCode = /^[A-Z]{2,5}[0-9]{0,2}$/.test(subjectCode);
-
-                    // Filter if too short or only numbers
-                    const isTooShort = subjectCode.length < 3;
-                    const isOnlyNumbers = /^[0-9]+$/.test(subjectCode);
-
-                    if (isDatePattern || isJunk || isShortCode || isTooShort || isOnlyNumbers) return;
-
                     // Extract Session/Section
                     const sessionMatch = content.match(/\[(\d+)\]/);
                     const sectionMatch = content.match(/\[([EFG])\]/i);
                     const sessionNum = sessionMatch ? sessionMatch[1] : "?";
                     const sectionLetter = sectionMatch ? sectionMatch[1].toUpperCase() : "?";
 
+                    // CHECK LOOKUP FIRST - If it's a known code, we keep it regardless of filters
                     const lookup = COURSE_LOOKUP[subjectCode];
                     const subjectName = lookup ? lookup.name : subjectCode;
                     let faculty = (parts[1] || "").replace(/[\[\]"']/g, '').trim() || "Unknown";
 
-                    // Second filter pass on the resolved name
+                    // Filter out date-like strings and miscellaneous junk
+                    const isDatePattern = /^\d{4}|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectCode);
+                    const isJunk = /^(Act|Activity|Holiday|No Class|TBD|Vacation)$/i.test(subjectCode);
                     const isNameDatePattern = /^\d{4}|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i.test(subjectName);
+
+                    // Only filter short codes if they are NOT in our known lookup table
+                    const isShortCode = /^[A-Z]{2,5}[0-9]{0,2}$/.test(subjectCode);
+                    const shouldFilter = !lookup && (isDatePattern || isJunk || isShortCode || subjectCode.length < 3 || /^[0-9]+$/.test(subjectCode));
+
+                    if (shouldFilter) return;
+
+                    // Final check on resolved name
                     if (subjectName && subjectName !== "Unknown" && !isNameDatePattern && !isJunk) {
                         subjectsFound.set(subjectName, faculty);
                     }
@@ -190,7 +188,8 @@ export async function applyTimetableSync(userId: string) {
                 userId,
                 name: sub.name,
                 description: `Faculty: ${sub.faculty}`,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                updatedAt: Date.now()
             });
         }
     }
@@ -220,6 +219,7 @@ export async function applyTimetableSync(userId: string) {
                         subjectId: subject.id,
                         title: sessionData.title,
                         date: sessionData.date,
+                        updatedAt: Date.now(),
                         transcript: '',
                         turns: [],
                         groundingFiles: [],
