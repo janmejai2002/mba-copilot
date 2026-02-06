@@ -69,7 +69,7 @@ const NexusView: React.FC<NexusViewProps> = ({ session, onBack }) => {
 
             {/* Main 3D Canvas */}
             <div className="w-full h-full">
-                <NeuralNexus concepts={session.concepts || []} />
+                <NeuralNexus sessionId={session.id} />
             </div>
 
             {/* AI Commander */}

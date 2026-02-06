@@ -54,12 +54,21 @@ const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick }) => 
     // Convert Map to array for rendering
     const nodeArray = useMemo(() => {
         const arr = Array.from(nodes.values());
+        let filtered = arr;
+
+        if (sessionId) {
+            // Filter by session ID (assuming node has filtered property or we filter by source)
+            // If nodes don't have sessionId, we might need a workaround.
+            // Assuming nodes might have a 'sessionId' or 'sourceId' property.
+            filtered = arr.filter(n => (n as any).sessionId === sessionId || (n as any).sourceId === sessionId);
+        }
+
         if (showDueOnly) {
             const dueIds = new Set(dueNodes.map(n => n.id));
-            return arr.filter(n => dueIds.has(n.id));
+            filtered = filtered.filter(n => dueIds.has(n.id));
         }
-        return arr;
-    }, [nodes, showDueOnly, dueNodes]);
+        return filtered;
+    }, [nodes, showDueOnly, dueNodes, sessionId]);
 
     // Initialize Three.js scene
     useEffect(() => {
@@ -393,8 +402,8 @@ const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick }) => 
                 <button
                     onClick={() => setShowDueOnly(!showDueOnly)}
                     className={`flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all pointer-events-auto ${showDueOnly
-                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                        ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                        : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
                         }`}
                 >
                     <Target className="w-4 h-4" />
