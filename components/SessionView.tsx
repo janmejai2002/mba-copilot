@@ -62,6 +62,15 @@ const SessionView: React.FC<SessionViewProps> = ({
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+  // Reset state when session changes
+  useEffect(() => {
+    setTranscription(session.turns || []);
+    setConcepts(session.concepts || []);
+    setNotes(session.notes || []);
+    setConsoleMessages([]);
+    setInsight(session.summary ? { summary: session.summary, examQuestions: session.examQuestions || [] } : null);
+  }, [session.id]); // Only trigger on ID change (new session)
+
   // Hook: Transcription Engine
   const {
     isRecording,
@@ -154,6 +163,35 @@ const SessionView: React.FC<SessionViewProps> = ({
     };
     setNotes(prev => [...prev, newNote]);
     if (text) updateTranscription('system', `[NOTE (${type}): ${text}]`);
+  };
+
+  // Handle File Upload (Context)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    addNotification('Uploading context...', 'info');
+
+    try {
+      const text = await file.text();
+      const groundingFile = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        type: file.type,
+        data: text,
+        size: file.size
+      };
+
+      const updatedSession = { ...session };
+      updatedSession.groundingFileDetails = [...(updatedSession.groundingFileDetails || []), groundingFile];
+
+      updateTranscription('system', `[Uploaded Context: ${file.name}]`);
+      onUpdateSession(updatedSession);
+      addNotification('✅ Context added to session', 'success');
+    } catch (err) {
+      console.error(err);
+      addNotification('Failed to read file', 'error');
+    }
   };
 
   const handleEndClass = async () => {
@@ -267,7 +305,16 @@ const SessionView: React.FC<SessionViewProps> = ({
               onExport={() => {/* Export Logic */ }}
             />
           </section>
-          <UnifiedInput onSend={handleUnifiedSend} placeholder="Ground a note or upload slide..." isLive={isRecording} />
+          <div className="space-y-2">
+            <UnifiedInput onSend={handleUnifiedSend} placeholder="Ground a note or upload slide..." isLive={isRecording} />
+            <div className="flex justify-between items-center px-2">
+              <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-black/30 cursor-pointer hover:text-black/60 transition-colors">
+                <span className="w-5 h-5 flex items-center justify-center bg-black/5 rounded-full"><Sparkles className="w-3 h-3" /></span>
+                Upload Context (PDF/Text)
+                <input type="file" onChange={handleFileUpload} className="hidden" accept=".txt,.md,.json,.csv" />
+              </label>
+            </div>
+          </div>
         </main>
 
         <aside className="lg:col-span-3 space-y-6 order-3">
@@ -308,6 +355,14 @@ const SessionView: React.FC<SessionViewProps> = ({
               <p className="text-md font-bold leading-relaxed">{turn.text}</p>
             </div>
           ))}
+        </div>
+      </ExpandableModal>
+
+      <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Neural Map">
+        <div className="h-[70vh] w-full bg-black/[0.01] rounded-3xl overflow-hidden relative">
+          <React.Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+            <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+          </React.Suspense>
         </div>
       </ExpandableModal>
     </div>

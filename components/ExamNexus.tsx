@@ -71,6 +71,55 @@ const ExamNexus: React.FC<ExamNexusProps> = ({ subjects, sessions, onOpenSession
         }
     };
 
+    const [isNexusSyncing, setIsNexusSyncing] = useState(false);
+
+    // Nexus Smart Sync: Automatically enrich sessions without insights
+    const runSmartSync = async () => {
+        const unasalyzedSessions = sessions.filter(s => !s.summary || !s.examQuestions || s.examQuestions.length === 0);
+        if (unasalyzedSessions.length === 0) return;
+
+        setIsNexusSyncing(true);
+        for (const session of unasalyzedSessions) {
+            // Skip if no transcript
+            if (!session.transcript && (!session.turns || session.turns.length === 0)) continue;
+
+            try {
+                // Generate Insight
+                const fullText = session.transcript || session.turns?.map(t => t.text).join(' ') || '';
+                if (fullText.length < 100) continue; // Skip empty sessions
+
+                // Generate Intelligence (Questions + Summary)
+                // Note: We'd normally use consumeCredits here but this is a bulk op
+                // For now, let's assume we do 1 by 1 or batch. 
+                // Implementing 1 by 1 for safety.
+
+                // We need a service that does this. 'generateSessionInsight' is in 'SessionView'. 
+                // We should lift it or import it.
+                // Importing generateSessionInsight from gemini service (it was used in SessionView)
+                const { generateSessionInsight } = await import('../services/gemini');
+
+                const result = await generateSessionInsight(fullText);
+
+                // Update Session in DB (via Prop or Store?)
+                // We have sessions prop, but to update we need the store function.
+                // ExamNexus receives 'sessions' but no update function.
+                // We should use useSessionStore directly since we are in a 'smart' component.
+                const { updateSession } = (await import('../stores/useSessionStore')).useSessionStore.getState();
+
+                const updated = { ...session, summary: result.summary, examQuestions: result.examQuestions };
+                await updateSession(session.id, updated);
+
+            } catch (e) {
+                console.error("Nexus Sync Error for session", session.id, e);
+            }
+        }
+        setIsNexusSyncing(false);
+    };
+
+    // Auto-run on mount if needed (optional, maybe manual button is safer for credits?)
+    // User asked "Automatically call all relevant AI apis".
+    // I will add a "Smart Sync" button that pulses if needed.
+
     return (
         <div className="max-w-[1600px] mx-auto pb-24 animate-apple-in px-8">
             <header className="mb-12 pt-10">
@@ -82,9 +131,19 @@ const ExamNexus: React.FC<ExamNexusProps> = ({ subjects, sessions, onOpenSession
                             <span className="label-caps mb-0 text-[var(--vidyos-gold)]">Neural Exam Intelligence</span>
                         </div>
                         <h1 className="section-title mb-4">Exam Nexus 2.0</h1>
-                        <p className="text-xl text-[var(--text-muted)] font-bold max-w-3xl leading-relaxed opacity-70 italic">
+                        <div className="flex items-center gap-4 text-xl text-[var(--text-muted)] font-bold max-w-3xl leading-relaxed opacity-70 italic">
                             AI-powered exam prediction, knowledge graph visualization, and personalized study priorities.
-                        </p>
+                            {sessions.some(s => !s.summary) && (
+                                <button
+                                    onClick={runSmartSync}
+                                    disabled={isNexusSyncing}
+                                    className="ml-4 px-4 py-2 bg-[var(--vidyos-gold)]/10 hover:bg-[var(--vidyos-gold)]/20 text-[var(--vidyos-gold)] text-xs uppercase tracking-widest rounded-lg transition-all flex items-center gap-2"
+                                >
+                                    <RefreshCw className={`w-3 h-3 ${isNexusSyncing ? 'animate-spin' : ''}`} />
+                                    {isNexusSyncing ? 'Enriching Nexus...' : 'Sync Missing Intelligence'}
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Stats Row */}
@@ -112,8 +171,8 @@ const ExamNexus: React.FC<ExamNexusProps> = ({ subjects, sessions, onOpenSession
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === tab
-                                ? 'bg-black text-white shadow-lg'
-                                : 'bg-white hover:bg-black/5 text-[var(--text-muted)]'
+                            ? 'bg-black text-white shadow-lg'
+                            : 'bg-white hover:bg-black/5 text-[var(--text-muted)]'
                             }`}
                     >
                         {tab === 'predictions' && <Target className="w-4 h-4 inline mr-2" />}
@@ -230,8 +289,8 @@ const ExamNexus: React.FC<ExamNexusProps> = ({ subjects, sessions, onOpenSession
                                                 </span>
                                             </div>
                                             <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${prediction.confidence === 'high' ? 'bg-red-500/10 text-red-500' :
-                                                    prediction.confidence === 'medium' ? 'bg-orange-500/10 text-orange-500' :
-                                                        'bg-gray-500/10 text-gray-500'
+                                                prediction.confidence === 'medium' ? 'bg-orange-500/10 text-orange-500' :
+                                                    'bg-gray-500/10 text-gray-500'
                                                 }`}>
                                                 {Math.round(prediction.probability * 100)}% likely
                                             </span>

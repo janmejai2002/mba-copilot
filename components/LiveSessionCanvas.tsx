@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import GridLayout, { Layout, Layouts, Responsive, WidthProvider } from 'react-grid-layout';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import {
@@ -115,21 +116,61 @@ const LiveSessionCanvas: React.FC<LiveSessionCanvasProps> = ({
     const addBookmark = useCallback(() => {
         const label = `Bookmark ${bookmarks.length + 1}`;
         setBookmarks(prev => [...prev, { time: Date.now(), label }]);
-        addNotification({ type: 'success', message: `📌 ${label} added` });
+        addNotification(`📌 ${label} added`, 'success');
     }, [bookmarks.length, addNotification]);
 
     const captureScreenshot = useCallback(() => {
         // This would capture the current view
-        addNotification({ type: 'info', message: '📸 Screenshot captured' });
+        addNotification('📸 Screenshot captured', 'info');
     }, [addNotification]);
 
     const markImportant = useCallback(() => {
         if (transcription.length > 0) {
             const lastTurn = transcription[transcription.length - 1];
             // Mark with star
-            addNotification({ type: 'success', message: '⭐ Marked as important' });
+            addNotification('⭐ Marked as important', 'success');
         }
     }, [transcription, addNotification]);
+
+    // Handle File Upload (Context)
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        addNotification('Uploading context...', 'info');
+
+        try {
+            // Simple text read for now, expandable to PDF with pdf.js later
+            const text = await file.text();
+
+            // Create a Grounding File object
+            const groundingFile = {
+                id: crypto.randomUUID(),
+                name: file.name,
+                type: file.type,
+                data: text, // Storing raw text for RAG/Context
+                size: file.size
+            };
+
+            const updatedSession = { ...session };
+            updatedSession.groundingFileDetails = [...(updatedSession.groundingFileDetails || []), groundingFile];
+
+            // Generate a notification turn
+            const systemTurn: TranscriptionTurn = {
+                role: 'system',
+                text: `[Uploaded Context: ${file.name}]`,
+                timestamp: Date.now()
+            };
+
+            setTranscription(prev => [...prev, systemTurn]);
+            onUpdateSession(updatedSession);
+            addNotification('✅ Context added to session', 'success');
+
+        } catch (err) {
+            console.error(err);
+            addNotification('Failed to read file', 'error');
+        }
+    };
 
     // Handle layout change
     const handleLayoutChange = (layout: Layout[], layouts: Layouts) => {
@@ -262,8 +303,8 @@ const LiveSessionCanvas: React.FC<LiveSessionCanvasProps> = ({
                     <div className="flex items-center gap-3">
                         {/* Recording indicator */}
                         <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl ${isRecording
-                                ? 'bg-red-500/20 border border-red-500/30'
-                                : 'bg-white/5 border border-white/10'
+                            ? 'bg-red-500/20 border border-red-500/30'
+                            : 'bg-white/5 border border-white/10'
                             }`}>
                             <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-green-500'
                                 }`} />
@@ -376,14 +417,20 @@ const LiveSessionCanvas: React.FC<LiveSessionCanvasProps> = ({
                         <span className="text-[9px] font-black uppercase tracking-wider text-purple-400 hidden md:inline">Capture</span>
                     </button>
 
+                    <label className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-xl transition-all cursor-pointer" title="Upload Context (PDF/Text)">
+                        <FileText className="w-4 h-4 text-green-400" />
+                        <span className="text-[9px] font-black uppercase tracking-wider text-green-400 hidden md:inline">Upload</span>
+                        <input type="file" onChange={handleFileUpload} className="hidden" accept=".txt,.md,.json,.csv" />
+                    </label>
+
                     <div className="w-px h-8 bg-white/10 mx-2" />
 
                     {/* Recording toggle in dock */}
                     <button
                         onClick={isRecording ? stopRecording : startRecording}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${isRecording
-                                ? 'bg-red-500 hover:bg-red-600 text-white'
-                                : 'bg-[var(--vidyos-teal)] hover:bg-[var(--vidyos-teal)]/80 text-white'
+                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                            : 'bg-[var(--vidyos-teal)] hover:bg-[var(--vidyos-teal)]/80 text-white'
                             }`}
                     >
                         {isRecording ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}

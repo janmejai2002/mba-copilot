@@ -514,7 +514,7 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
     };
 
     return (
-        <div className={`apple-card overflow-hidden flex flex-col ${isFullscreen ? 'fixed inset-4 md:inset-8 z-[101]' : 'min-h-[600px]'}`}>
+        <div className="apple-card overflow-hidden flex flex-col h-full bg-white/50 backdrop-blur-xl">
             {/* Header */}
             <div className="flex flex-col gap-4 p-6 border-b border-black/[0.04]">
                 <div className="flex justify-between items-center">
@@ -556,13 +556,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                             title="Reset view"
                         >
                             <Minimize2 className="w-3 h-3 text-black/30" />
-                        </button>
-                        <button
-                            onClick={() => setIsFullscreen(!isFullscreen)}
-                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
-                            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                        >
-                            <Maximize2 className="w-3 h-3 text-black/30" />
                         </button>
                     </div>
                 </div>

@@ -80,6 +80,7 @@ const syncToDrive = async () => {
         } catch (e: any) {
             console.error("GDrive Sync Failed:", e);
             if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
+                console.log("🔄 Triggering Re-Auth due to 403/401...");
                 authErrorCallback();
             }
         }
@@ -175,8 +176,12 @@ export const storage = {
 
     async initializeDefaultSubjects(userId: string) {
         const existingSubjects = await db.subjects.toArray();
-        if (existingSubjects.length > 0) return; // Already initialized
+        if (existingSubjects.length > 0) {
+            console.log('Subjects already exist, skipping default init.');
+            return;
+        }
 
+        console.log('Initializing default subjects for user:', userId);
         const defaultSubjects: Subject[] = [
             {
                 id: crypto.randomUUID(),

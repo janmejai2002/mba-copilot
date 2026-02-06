@@ -52,20 +52,24 @@ export const googleDrive = {
             });
 
             if (!response.ok) {
-                if (response.status === 401) {
+                if (response.status === 401 || response.status === 403) {
+                    // 403 can also mean token issues in Drive API context
                     throw new Error('UNAUTHORIZED_DRIVE_ACCESS');
                 }
                 const errorData = await response.json();
-                if ((response.status === 403 || response.status === 404) && existingFileId) {
-                    console.warn(`File ${existingFileId} inaccessible (status ${response.status}). Retrying as new file...`);
+                if (response.status === 404 && existingFileId) {
+                    console.warn(`File ${existingFileId} not found (404). Creating new...`);
                     return this.saveToAppData(accessToken, fileName, content);
                 }
                 throw new Error(errorData.error?.message || 'Drive API Error');
             }
 
             return await response.json();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving to Google Drive:', error);
+            if (error.message === 'UNAUTHORIZED_DRIVE_ACCESS') {
+                throw error; // Re-throw for db.ts to handle
+            }
             return null;
         }
     }

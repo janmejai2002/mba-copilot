@@ -69,6 +69,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             />
                         </div>
                         <p className="text-[10px] text-black/30 leading-relaxed">Overrides the default server key. Used for long-form synthesis and session insights.</p>
+                        <button
+                            onClick={async () => {
+                                if (!geminiKey) return;
+                                try {
+                                    // Use the proxy or direct? Proxy uses 'x-custom-gemini-key'
+                                    // But we are in Settings, we can test direct or via proxy. 
+                                    // Let's test via proxy to verify end-to-end.
+                                    localStorage.setItem('custom_gemini_key', geminiKey); // Ensure it's set for the test
+                                    const { generateSessionInsight } = await import('../services/gemini');
+                                    // Generating insight might be heavy. Let's make a manual lightweight call or just assume imports work.
+                                    // Actual Test:
+                                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ contents: [{ parts: [{ text: 'Hello' }] }] })
+                                    });
+                                    if (res.ok) alert('✅ Gemini Key Working');
+                                    else {
+                                        const err = await res.json();
+                                        alert('❌ Gemini Error: ' + (err.error?.message || 'Invalid Key'));
+                                    }
+                                } catch (e) { alert('❌ Connection Failed'); }
+                            }}
+                            className="bg-black/5 hover:bg-black/10 text-[9px] font-bold px-3 py-1 rounded-lg uppercase tracking-widest transition-all"
+                        >
+                            Test Gemini Connection
+                        </button>
                     </div>
 
                     {/* Perplexity Section */}
@@ -80,13 +107,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <a href="https://www.perplexity.ai/settings/api" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Get Key</a>
                         </div>
-                        <input
-                            type="password"
-                            value={perplexityKey}
-                            onChange={(e) => setPerplexityKey(e.target.value)}
-                            placeholder="pplx-..."
-                            className="w-full px-5 py-4 bg-black/[0.03] border border-black/[0.05] rounded-2xl text-sm font-mono placeholder:text-black/20 outline-none focus:border-black/20 focus:bg-white transition-all"
-                        />
+                        <div className="relative group">
+                            <input
+                                type="password"
+                                value={perplexityKey}
+                                onChange={(e) => setPerplexityKey(e.target.value)}
+                                placeholder="pplx-..."
+                                className="w-full px-5 py-4 bg-black/[0.03] border border-black/[0.05] rounded-2xl text-sm font-mono placeholder:text-black/20 outline-none focus:border-black/20 focus:bg-white transition-all"
+                            />
+                        </div>
+                        <button
+                            onClick={async () => {
+                                if (!perplexityKey) return;
+                                try {
+                                    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+                                        method: 'POST',
+                                        headers: {
+                                            Authorization: `Bearer ${perplexityKey}`,
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            model: 'llama-3.1-sonar-small-128k-online',
+                                            messages: [{ role: 'user', content: 'ping' }]
+                                        })
+                                    });
+                                    if (res.ok) alert('✅ Perplexity Key Working');
+                                    else alert('❌ Invalid Perplexity Key');
+                                } catch (e) { alert('❌ Connection Failed'); }
+                            }}
+                            className="bg-black/5 hover:bg-black/10 text-[9px] font-bold px-3 py-1 rounded-lg uppercase tracking-widest transition-all mt-2"
+                        >
+                            Test Perplexity Connection
+                        </button>
                     </div>
 
                     {/* Deepgram Section */}
@@ -106,6 +158,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             className="w-full px-5 py-4 bg-black/[0.03] border border-black/[0.05] rounded-2xl text-sm font-mono placeholder:text-black/20 outline-none focus:border-black/20 focus:bg-white transition-all"
                         />
                         <p className="text-[10px] text-black/30 leading-relaxed">Required for real-time Hinglish transcription. Enable 'Nova-2' model for best results.</p>
+                        <button
+                            onClick={async () => {
+                                if (!deepgramKey) return;
+                                try {
+                                    const res = await fetch('https://api.deepgram.com/v1/projects', {
+                                        headers: { Authorization: `Token ${deepgramKey}` }
+                                    });
+                                    if (res.ok) alert('✅ Deepgram Key Working');
+                                    else alert('❌ Invalid Deepgram Key');
+                                } catch (e) { alert('❌ Connection Failed'); }
+                            }}
+                            className="bg-black/5 hover:bg-black/10 text-[9px] font-bold px-3 py-1 rounded-lg uppercase tracking-widest transition-all"
+                        >
+                            Test Deepgram Connection
+                        </button>
                     </div>
 
                     <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex gap-4 items-start">

@@ -1,3 +1,4 @@
+
 import { DEFAULT_MODEL, GEMINI_MODELS } from '../constants/models';
 
 // No longer using direct AI SDK in frontend for security - calls /api/gemini proxy instead
@@ -24,10 +25,17 @@ const callGeminiProxy = async (model: string, contents: string, config?: any) =>
 export const generateSessionInsight = async (transcript: string) => {
   const response = await callGeminiProxy(
     DEFAULT_MODEL,
-    `Please summarize the following classroom lecture transcript and generate 3 potential exam questions based on it. Use a professional academic tone.
+    `Analyze this MBA lecture transcript and provide:
+    1. A concise summary (max 3 sentences).
+    2. A list of 3-5 potential exam questions based on the content.
     
-    Transcript:
-    ${transcript}`,
+    Transcript: ${transcript.substring(0, 10000)}... (truncated)
+
+    Output format (JSON):
+    {
+        "summary": "...",
+        "examQuestions": ["Q1", "Q2", "Q3"]
+    }`,
     {
       responseMimeType: "application/json"
     }
@@ -42,6 +50,25 @@ export const extractConceptsFromMaterials = async (fileNames: string[]) => {
     `Based on these file names uploaded as study material for this class, predict 5 core concepts or technical terms that are likely contained in them. Provide a brief 1-sentence explanation for each.
     
     Files: ${fileNames.join(', ')}`,
+    {
+      responseMimeType: "application/json"
+    }
+  );
+
+  return JSON.parse(response.text || '[]');
+};
+
+export const extractConceptsFromTranscript = async (transcript: string) => {
+  const response = await callGeminiProxy(
+    DEFAULT_MODEL,
+    `Analyze this lecture transcript and extract 5 key concepts for a knowledge graph.
+      
+      Transcript: ${transcript.substring(0, 5000)}...
+  
+      Output JSON array:
+      [
+        { "keyword": "Term", "explanation": "Definition..." }
+      ]`,
     {
       responseMimeType: "application/json"
     }
