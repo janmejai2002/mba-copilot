@@ -32,30 +32,28 @@ class MasterIntelligenceService {
         const notesSummary = existingNotes.map(n => n.content).join('\n');
         const chatsSummary = chats.map(c => `Q: ${c.text}\nAI: ${c.response}`).join('\n');
 
-        const prompt = `
-      You are the Master Scribe for the subject "${subjectName}". 
-      Analyze the following lecture materials:
-      
-      TRANSCRIPT:
-      ${fullTranscript}
-      
-      STUDENT NOTES:
-      ${notesSummary}
-      
-      Q&A BRAINSTORMING:
-      ${chatsSummary}
-      
-      TASK:
-      Create a comprehensive, structured, and evolving master document for this subject.
-      Use professional academic markdown. Highlight formulas, key dates, and cross-references.
-      This doc should be the ULTIMATE resource for the student to revise for exams.
-      If this is an update, ensure it flows well with previous content.
-    `;
+        console.log("🚀 Calling Agentic Synthesis on GCP...");
 
-        // In a real implementation with GCP, this would call Vertex AI.
-        // For now, we reuse the existing gemini service which we will upgrade.
-        const res = await generateSessionInsight(prompt);
-        return res.summary;
+        try {
+            const response = await fetch('/api/agent/synthesis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: subjectName,
+                    transcript: fullTranscript,
+                    notes: notesSummary,
+                    chats: chatsSummary
+                })
+            });
+
+            if (!response.ok) throw new Error("Synthesis Agent failed");
+            const data = await response.json();
+            return data.master_doc;
+        } catch (error) {
+            console.error("Agentic Synthesis failed, falling back to basic Gemini:", error);
+            const res = await generateSessionInsight(fullTranscript);
+            return res.summary;
+        }
     }
 
     /**

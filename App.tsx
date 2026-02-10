@@ -65,7 +65,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      const timeRemaining = (user.expiresAt - Date.now()) / 1000 / 60;
+      console.log(`[Auth] Session active. User: ${user.email}. Expires in: ${timeRemaining.toFixed(2)} mins`);
+
       if (Date.now() > user.expiresAt) {
+        console.warn("[Auth] Session expired based on time. Logging out.");
         logout();
         return;
       }
@@ -77,8 +81,9 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
 
-    const unsubscribeAuthError = onAuthError(() => {
-      alert("Your Google session has expired or is invalid. Please log in again.");
+    const unsubscribeAuthError = onAuthError((reason) => {
+      console.error("[Auth] Background auth error triggered logout:", reason);
+      alert(`Your Google session has expired or is invalid. Reason: ${reason || 'Unknown'}. Please log in again.`);
       logout();
     });
 

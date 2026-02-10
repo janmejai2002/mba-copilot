@@ -33,8 +33,8 @@ export const clearDriveToken = () => {
     gdriveFileId = null;
 };
 
-let authErrorCallback: (() => void) | null = null;
-export const onAuthError = (cb: () => void) => {
+let authErrorCallback: ((reason: string) => void) | null = null;
+export const onAuthError = (cb: (reason: string) => void) => {
     authErrorCallback = cb;
     return () => { authErrorCallback = null; };
 };
@@ -81,7 +81,7 @@ const syncToDrive = async () => {
             console.error("GDrive Sync Failed:", e);
             if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
                 console.log("🔄 Triggering Re-Auth due to 403/401...");
-                authErrorCallback();
+                authErrorCallback(e.message);
             }
         }
     }, 30000); // 30 second debounce
@@ -132,7 +132,7 @@ export const storage = {
             return false;
         } catch (e: any) {
             if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
-                authErrorCallback();
+                authErrorCallback(e.message);
             }
             return false;
         }
