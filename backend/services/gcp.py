@@ -18,7 +18,7 @@ else:
     print("⚠️ GCP_PROJECT not found. Vertex AI may not initialize correctly.")
 
 class VertexService:
-    def __init__(self, model_name: str = "gemini-1.5-pro-002"):
+    def __init__(self, model_name: str = "gemini-2.0-flash"):
         self.model = GenerativeModel(model_name)
 
     async def generate_content(self, prompt: str, system_instruction: str = None):
