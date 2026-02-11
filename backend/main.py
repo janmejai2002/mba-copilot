@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agents.synthesis_agent import synthesis_agent
+from agents.mastermind import master_graph
+from langchain_core.messages import HumanMessage
+
 # Temporarily disabled until google-cloud-speech is installed
 # from services.audio import audio_streamer
 # from agents.scribe import scribe_agent
@@ -26,9 +29,61 @@ class SynthesisRequest(BaseModel):
     notes: Optional[str] = ""
     chats: Optional[str] = ""
 
+class ChatRequest(BaseModel):
+    message: str
+    session_id: str
+    user_context: Optional[dict] = {}
+
 @app.get("/")
 async def health_check():
     return {"status": "active", "service": "Vidyos Fusion Engine", "version": "0.1.0"}
+
+@app.post("/api/agent/chat")
+async def run_chat(request: ChatRequest):
+    """
+    Triggers the MasterMind LangGraph for a multi-turn agentic conversation.
+    """
+    try:
+        # Initial state for the graph
+        initial_state = {
+            "messages": [HumanMessage(content=request.message)],
+            "user_context": request.user_context,
+            "next": ""
+        }
+        
+        # Run the graph
+        final_state = await master_graph.ainvoke(initial_state)
+        
+        # Extract the last message from the graph
+        response_messages = final_state.get("messages", [])
+        ai_response = response_messages[-1].content if response_messages else "No response generated."
+        
+        # Determine the agent that was last active
+        last_agent = final_state.get("next", "MasterMind")
+        if last_agent == "DONE":
+            # Find the true last agent by looking at message metadata or logic
+            # For now, we'll try to parse the content
+            pass
+
+        # Try to parse as JSON if structured output is expected
+        try:
+            structured_data = json.loads(ai_response)
+            return {
+                "response": structured_data.get("text", ai_response),
+                "type": structured_data.get("type", "text"),
+                "payload": structured_data.get("payload", {}),
+                "agent": last_agent,
+                "intermediate_steps": [m.content for m in response_messages[1:-1]]
+            }
+        except:
+            return {
+                "response": ai_response,
+                "agent": last_agent,
+                "intermediate_steps": [m.content for m in response_messages[1:-1]]
+            }
+    except Exception as e:
+        print(f"Graph Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/agent/synthesis")
 async def run_synthesis(request: SynthesisRequest):

@@ -2,6 +2,7 @@
 import os
 import vertexai
 from vertexai.vision_models import ImageGenerationModel
+import json
 from core.state import AgentState
 
 class ArtistAgent:
@@ -28,7 +29,17 @@ class ArtistAgent:
         prompt = f"Creating a professional educational diagram for: {last_message}"
         # response = self.model.generate_images(prompt=prompt)
         
-        return {"messages": [f"ArtistAgent: I am generating a visual diagram for '{last_message}' using Imagen 3."]}
+        return {
+            "messages": [
+                json.dumps({
+                    "type": "image",
+                    "text": f"I am generating a visual diagram for '{last_message}' using Imagen 3.",
+                    "payload": {
+                        "url": None # In production, this would be the GCS URL
+                    }
+                })
+            ]
+        }
 
 # Export for LangGraph
 artist_agent = ArtistAgent()

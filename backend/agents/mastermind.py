@@ -23,12 +23,17 @@ system_prompt = (
     "2. NavigatorAgent: For exploring the knowledge graph, expanding nodes, or explaining concepts visually.\n"
     "3. ResearchAgent: For answering specific doubts, finding facts, or researching topics outside the graph.\n"
     "4. CurriculumMaster: For adjusting learning paths, checking mastery levels, or pruning content.\n"
+    "5. ProfessorAgent: For deep academic dives, exam predictions, and advanced theoretical explanations.\n"
+    "6. ArtistAgent: For generating diagrams, visual aids, or sketches of concepts.\n"
+    "7. ComposerAgent: For generating audio summaries or podcasts of the content.\n"
+    "\n"
+    "If the request is fully answered or the task is finished, return 'DONE'.\n"
     "\n"
     "User Context:\n"
     "Current Page: {current_page}\n"
     "User Focus: {user_focus}\n"
     "\n"
-    "Return the name of the agent to call: 'ScribeAgent', 'NavigatorAgent', 'ResearchAgent', or 'CurriculumMaster'."
+    "Return the agent name or 'DONE'."
 )
 
 prompt = ChatPromptTemplate.from_messages([
@@ -42,7 +47,11 @@ def supervisor_node(state: AgentState):
     """
     The MasterMind node that decides which agent to call next.
     """
-    user_message = state["messages"][-1].content
+    messages = state.get("messages", [])
+    if not messages:
+        return {"next": "DONE"}
+        
+    user_message = messages[-1].content
     user_context = state.get("user_context", {})
     
     result = chain.invoke({
@@ -51,16 +60,25 @@ def supervisor_node(state: AgentState):
         "user_focus": user_context.get("user_focus", "None")
     })
     
-    # Simple logic to extract agent name (enhance with structured output later)
     decision = result.content.strip()
     
-    # Fallback if LLM creates a sentence
-    if "Scribe" in decision: return {"next": "ScribeAgent"}
-    if "Navigator" in decision: return {"next": "NavigatorAgent"}
-    if "Research" in decision: return {"next": "ResearchAgent"}
-    if "Curriculum" in decision: return {"next": "CurriculumMaster"}
+    # Mapping table for routing
+    mapping = {
+        "Scribe": "ScribeAgent",
+        "Navigator": "NavigatorAgent",
+        "Research": "ResearchAgent",
+        "Curriculum": "CurriculumMaster",
+        "Professor": "ProfessorAgent",
+        "Artist": "ArtistAgent",
+        "Composer": "ComposerAgent",
+        "DONE": "DONE"
+    }
     
-    return {"next": "ResearchAgent"} # Default fallback
+    for key, val in mapping.items():
+        if key.lower() in decision.lower():
+            return {"next": val}
+    
+    return {"next": "DONE"}
 
 # Import Sub-Agents
 from agents.scribe import scribe_node
@@ -85,17 +103,6 @@ workflow.add_node("ComposerAgent", composer_node)
 
 workflow.set_entry_point("MasterMind")
 
-workflow.add_conditional_edges(
-    "MasterMind",
-    lambda x: x["next"],
-    {
-        "ScribeAgent": "ScribeAgent",
-        "NavigatorAgent": "NavigatorAgent",
-        "ResearchAgent": "ResearchAgent",
-        "CurriculumMaster": "CurriculumMaster"
-    }
-)
-
 # All agents return to MasterMind for evaluation (Multi-turn Loop)
 workflow.add_edge("ScribeAgent", "MasterMind")
 workflow.add_edge("NavigatorAgent", "MasterMind")
@@ -104,10 +111,6 @@ workflow.add_edge("CurriculumMaster", "MasterMind")
 workflow.add_edge("ProfessorAgent", "MasterMind")
 workflow.add_edge("ArtistAgent", "MasterMind")
 workflow.add_edge("ComposerAgent", "MasterMind")
-
-# We need a terminal condition to prevent infinite loops.
-# Let's add a "FinalResponse" node later if we want the AI to stop.
-# For now, we'll use END when 'next' is empty or 'DONE'.
 
 workflow.add_conditional_edges(
     "MasterMind",
