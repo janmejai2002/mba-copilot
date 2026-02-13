@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'https://vidyos-backend-1066396672407.us-central1.run.app',
+          target: 'https://vidyos-backend-ip42va3fma-uc.a.run.app',
           changeOrigin: true,
           secure: false,
         }
