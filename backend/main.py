@@ -1,22 +1,48 @@
-from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import os
 import json
 import asyncio
 from dotenv import load_dotenv
+import tempfile
+import base64
 
 load_dotenv()
 
-from agents.synthesis_agent import synthesis_agent
-from agents.mastermind import master_graph
-from langchain_core.messages import HumanMessage
+# ─── LAZY LOADING ───
+# Do NOT import agents at module level — their dependencies (Vertex AI, LangChain)
+# require GCP authentication which may not be available at container cold-start.
+# Instead, we import them on first use inside each endpoint.
 
-# Temporarily disabled until google-cloud-speech is installed
-# from services.audio import audio_streamer
-# from agents.scribe import scribe_agent
+_master_graph = None
+_synthesis_agent = None
+
+def get_master_graph():
+    global _master_graph
+    if _master_graph is None:
+        from agents.mastermind import master_graph
+        _master_graph = master_graph
+    return _master_graph
+
+def get_synthesis_agent():
+    global _synthesis_agent
+    if _synthesis_agent is None:
+        from agents.synthesis_agent import synthesis_agent
+        _synthesis_agent = synthesis_agent
+    return _synthesis_agent
 
 app = FastAPI(title="Vidyos Agentic Backend", version="0.1.0")
+
+# CORS for dev and production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class GeminiRequest(BaseModel):
     model: str
@@ -44,6 +70,9 @@ async def run_chat(request: ChatRequest):
     Triggers the MasterMind LangGraph for a multi-turn agentic conversation.
     """
     try:
+        from langchain_core.messages import HumanMessage
+        graph = get_master_graph()
+        
         # Initial state for the graph
         initial_state = {
             "messages": [HumanMessage(content=request.message)],
@@ -52,7 +81,7 @@ async def run_chat(request: ChatRequest):
         }
         
         # Run the graph
-        final_state = await master_graph.ainvoke(initial_state)
+        final_state = await graph.ainvoke(initial_state)
         
         # Extract the last message from the graph
         response_messages = final_state.get("messages", [])
@@ -91,7 +120,8 @@ async def run_synthesis(request: SynthesisRequest):
     Triggers the Synthesis Agent to generate a Master Doc.
     """
     try:
-        doc = await synthesis_agent.generate_master_doc(
+        agent = get_synthesis_agent()
+        doc = await agent.generate_master_doc(
             request.subject, 
             request.transcript, 
             request.notes, 
@@ -100,6 +130,72 @@ async def run_synthesis(request: SynthesisRequest):
         return {"master_doc": doc}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/agent/transcribe")
+async def transcribe_audio(
+    audio: UploadFile = File(...),
+    language: str = Form("en-IN"),
+    model: str = Form("chirp_2")
+):
+    """
+    Transcribes audio using Google Cloud Speech-to-Text V2 (Chirp model).
+    Accepts audio file uploads from the frontend.
+    Supports multilingual transcription (Hindi-English code-switching).
+    """
+    try:
+        from google.cloud import speech_v2 as speech
+        
+        project_id = os.environ.get("GCP_PROJECT", "mba-copilot-485805")
+        location = os.environ.get("GCP_LOCATION", "us-central1")
+        
+        client = speech.SpeechClient()
+        
+        # Read the uploaded audio file
+        audio_content = await audio.read()
+        
+        # Configure the recognition request
+        config = speech.RecognitionConfig(
+            auto_decoding_config=speech.AutoDetectDecodingConfig(),
+            language_codes=[language, "hi-IN"],  # Primary + Hindi for code-switching
+            model=model,
+            features=speech.RecognitionFeatures(
+                enable_automatic_punctuation=True,
+                enable_word_time_offsets=True,
+            ),
+        )
+        
+        recognizer_name = f"projects/{project_id}/locations/{location}/recognizers/_"
+        
+        request = speech.RecognizeRequest(
+            recognizer=recognizer_name,
+            config=config,
+            content=audio_content,
+        )
+
+        response = client.recognize(request=request)
+        
+        transcript_parts = []
+        for result in response.results:
+            if result.alternatives:
+                transcript_parts.append(result.alternatives[0].transcript)
+        
+        full_transcript = " ".join(transcript_parts)
+        
+        return {
+            "transcript": full_transcript,
+            "language": language,
+            "model": model,
+            "confidence": response.results[0].alternatives[0].confidence if response.results else 0
+        }
+        
+    except ImportError:
+        raise HTTPException(
+            status_code=500, 
+            detail="google-cloud-speech not installed. Run: pip install google-cloud-speech"
+        )
+    except Exception as e:
+        print(f"Google STT Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Transcription Error: {str(e)}")
 
 @app.post("/api/gemini")
 async def gemini_proxy(request: GeminiRequest, x_custom_gemini_key: Optional[str] = Header(None)):

@@ -1,0 +1,76 @@
+🎙️ GOOGLE CHIRP STT - REAL INTEGRATION TEST
+📅 2026-02-13 16:26:51
+
+============================================================
+TEST: Google Cloud Speech-to-Text V2 (Chirp)
+============================================================
+Project: mba-copilot-485805
+Location: us-central1
+Credentials: C:\Users\Janmejai\Documents\keys\mba-copilot-485805-1b09535c7d09.json
+
+Step 1: Generating test audio via Google TTS...
+  ✅ Generated 306790 bytes of audio
+  ✅ Saved as test_audio.wav
+
+Step 2: Transcribing with Google Chirp (Speech-to-Text V2)...
+  ❌ Chirp FAILED: 400 Expected resource location to be global, but found us-central1 in resource name.
+Traceback (most recent call last):
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\google\api_core\grpc_helpers.py", line 75, in error_remapped_callable
+    return callable_(*args, **kwargs)
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_interceptor.py", line 276, in __call__
+    response, ignored_call = self._with_call(
+                             ~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<4 lines>...
+        compression=compression,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_interceptor.py", line 331, in _with_call
+    return call.result(), call
+           ~~~~~~~~~~~^^
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_channel.py", line 438, in result
+    raise self
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_interceptor.py", line 314, in continuation
+    response, call = self._thunk(new_method).with_call(
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<4 lines>...
+        compression=new_compression,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_channel.py", line 1173, in with_call
+    return _end_unary_response_blocking(state, call, True, None)
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\grpc\_channel.py", line 990, in _end_unary_response_blocking
+    raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+	status = StatusCode.INVALID_ARGUMENT
+	details = "Expected resource location to be global, but found us-central1 in resource name."
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:142.250.193.74:443 {grpc_message:"Expected resource location to be global, but found us-central1 in resource name.", grpc_status:3}"
+>
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Janmejai\Downloads\mba-copilot\backend\test_chirp.py", line 100, in test_chirp
+    response = client.recognize(request=request)
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\google\cloud\speech_v2\services\speech\client.py", line 1808, in recognize
+    response = rpc(
+        request,
+    ...<2 lines>...
+        metadata=metadata,
+    )
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\google\api_core\gapic_v1\method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+  File "C:\Users\Janmejai\AppData\Roaming\Python\Python313\site-packages\google\api_core\grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.InvalidArgument: 400 Expected resource location to be global, but found us-central1 in resource name.
+
+
+============================================================
+📊 RESULT: ❌ FAILED
+============================================================

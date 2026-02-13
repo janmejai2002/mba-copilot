@@ -1,0 +1,109 @@
+[96mcomponents/ExamNexus.tsx[0m:[93m110[0m:[93m49[0m - [91merror[0m[90m TS2554: [0mExpected 1 arguments, but got 2.
+
+[7m110[0m                 await updateSession(session.id, updated);
+[7m   [0m [91m                                                ~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m8[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'React'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m       ~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m17[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useState'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                ~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m27[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useRef'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                          ~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m35[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useEffect'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                  ~~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m46[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useCallback'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                             ~~~~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m1[0m:[93m59[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'Suspense'.
+
+[7m1[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                                          ~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m8[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'React'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m       ~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m17[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useState'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                ~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m27[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useRef'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                          ~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m35[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useEffect'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                  ~~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m46[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'useCallback'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                             ~~~~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m2[0m:[93m59[0m - [91merror[0m[90m TS2300: [0mDuplicate identifier 'Suspense'.
+
+[7m2[0m import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+[7m [0m [91m                                                          ~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m3[0m:[93m22[0m - [91merror[0m[90m TS2614: [0mModule '"react-grid-layout"' has no exported member 'WidthProvider'. Did you mean to use 'import WidthProvider from "react-grid-layout"' instead?
+
+[7m3[0m import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
+[7m [0m [91m                     ~~~~~~~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m176[0m:[93m60[0m - [91merror[0m[90m TS2552: [0mCannot find name 'Layouts'. Did you mean 'Layout'?
+
+[7m176[0m     const handleLayoutChange = (layout: Layout[], layouts: Layouts) => {
+[7m   [0m [91m                                                           ~~~~~~~[0m
+
+[96mcomponents/LiveSessionCanvas.tsx[0m:[93m193[0m:[93m26[0m - [91merror[0m[90m TS2741: [0mProperty 'onClear' is missing in type '{ isRecording: boolean; isPaused: boolean; setIsPaused: Dispatch<SetStateAction<boolean>>; skipSilence: boolean; setSkipSilence: Dispatch<SetStateAction<boolean>>; ... 4 more ...; onExport: () => void; }' but required in type 'SessionControlsProps'.
+
+[7m193[0m                         <SessionControls
+[7m   [0m [91m                         ~~~~~~~~~~~~~~~[0m
+
+  [96mcomponents/SessionControls.tsx[0m:[93m17[0m:[93m5[0m
+    [7m17[0m     onClear: () => void;
+    [7m  [0m [96m    ~~~~~~~[0m
+    'onClear' is declared here.
+
+[96mcomponents/Practice.tsx[0m:[93m38[0m:[93m88[0m - [91merror[0m[90m TS2554: [0mExpected 1 arguments, but got 2.
+
+[7m38[0m                             await useSessionStore.getState().updateSession(session.id, updated);
+[7m  [0m [91m                                                                                       ~~~~~~~[0m
+
+[96mservices/exam-prediction.ts[0m:[93m51[0m:[93m40[0m - [91merror[0m[90m TS2339: [0mProperty 'replace' does not exist on type 'never'.
+
+[7m51[0m                 const cleanWord = word.replace(/["']/g, '').trim();
+[7m  [0m [91m                                       ~~~~~~~[0m
+
+[96mstores/useLayoutStore.ts[0m:[93m3[0m:[93m18[0m - [91merror[0m[90m TS2724: [0m'"react-grid-layout"' has no exported member named 'Layouts'. Did you mean 'Layout'?
+
+[7m3[0m import { Layout, Layouts } from 'react-grid-layout';
+[7m [0m [91m                 ~~~~~~~[0m
+
+
+Found 19 errors in 5 files.
+
+Errors  Files
+     1  components/ExamNexus.tsx[90m:110[0m
+    15  components/LiveSessionCanvas.tsx[90m:1[0m
+     1  components/Practice.tsx[90m:38[0m
+     1  services/exam-prediction.ts[90m:51[0m
+     1  stores/useLayoutStore.ts[90m:3[0m

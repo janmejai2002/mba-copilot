@@ -8,7 +8,8 @@ import TranscriptStream from './TranscriptStream';
 import SessionControls from './SessionControls';
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
-import { ArrowLeft, Share2, Download, Layers, ShieldCheck, Sparkles, Layout, Network, Maximize2, Cpu, X, Activity } from 'lucide-react';
+import LiveContextPanel from './LiveContextPanel';
+import { ArrowLeft, Share2, Download, Layers, ShieldCheck, Sparkles, Layout, Network, Maximize2, Cpu, X, Activity, Mic } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { masterIntelligence } from '../services/intelligence';
 import AgentControlCenter from './AgentControlCenter';
@@ -16,7 +17,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { CREDIT_COSTS } from '../constants/pricing';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import { useBackgroundStore } from '../stores/useBackgroundStore';
-import { useTranscription } from '../hooks/useTranscription';
+import { useTranscription, STTProvider } from '../hooks/useTranscription';
 import { useSessionSync } from '../hooks/useSessionSync';
 import { useKnowledgeStore } from '../stores/useKnowledgeStore';
 
@@ -59,6 +60,8 @@ const SessionView: React.FC<SessionViewProps> = ({
   );
   const [notes, setNotes] = useState<Note[]>(session.notes || []);
   const [consoleMessages, setConsoleMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
+  const [liveQuestions, setLiveQuestions] = useState<string[]>([]);
+  const liveQuestionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // UI State
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -96,7 +99,9 @@ const SessionView: React.FC<SessionViewProps> = ({
     setSkipSilence,
     analyser,
     startRecording,
-    stopRecording
+    stopRecording,
+    sttProvider,
+    setSTTProvider
   } = useTranscription((text) => {
     updateTranscription('user', text);
   });
@@ -183,6 +188,57 @@ const SessionView: React.FC<SessionViewProps> = ({
       syncKnowledgeGraph();
     }
   }, [transcription.length]);
+
+  // Auto-generate live questions from transcript
+  useEffect(() => {
+    if (transcription.length > 0 && transcription.length % 8 === 0) {
+      if (liveQuestionsTimerRef.current) clearTimeout(liveQuestionsTimerRef.current);
+      liveQuestionsTimerRef.current = setTimeout(async () => {
+        try {
+          const recentText = transcription.slice(-8).map(t => t.text).join(' ');
+          const res = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Custom-Gemini-Key': localStorage.getItem('custom_gemini_key') || '' },
+            body: JSON.stringify({
+              model: 'gemini-2.0-flash-exp',
+              contents: `Based on this lecture segment, generate 3 short questions a student might be asked in an exam. Return ONLY a JSON array of strings.\n\nSegment: "${recentText.substring(0, 2000)}"`,
+              config: { responseMimeType: 'application/json' }
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const questions = JSON.parse(data.text || '[]');
+            if (Array.isArray(questions)) setLiveQuestions(questions.slice(0, 5));
+          }
+        } catch (err) {
+          console.error('Live questions generation error:', err);
+        }
+      }, 3000);
+    }
+    return () => { if (liveQuestionsTimerRef.current) clearTimeout(liveQuestionsTimerRef.current); };
+  }, [transcription.length]);
+
+  // Handler: LiveContextPanel feeds new concepts into KG
+  const handleLiveConceptsExtracted = useCallback((newConcepts: { keyword: string; explanation: string; timestamp: number }[]) => {
+    setConcepts(prev => {
+      const existingKeys = new Set(prev.map(c => c.keyword.toLowerCase()));
+      const unique = newConcepts.filter(c => !existingKeys.has(c.keyword.toLowerCase()));
+      if (unique.length === 0) return prev;
+      const merged = [...prev, ...unique];
+      // Also sync to knowledge store
+      try { importToKnowledgeStore(merged, session.id); } catch (e) { /* silent */ }
+      return merged;
+    });
+  }, [session.id, importToKnowledgeStore]);
+
+  // Handler: Ask about a keyword from LiveContextPanel
+  const handleAskAboutKeyword = useCallback((keyword: string) => {
+    const question = `Explain "${keyword}" in detail in the context of ${subject.name}. Include exam-relevant points.`;
+    setConsoleMessages(prev => [...prev, { role: 'user', text: question }]);
+    masterIntelligence.askMasterMind(question, session.id).then(res => {
+      setConsoleMessages(prev => [...prev, { role: 'ai', text: res.response || 'Processed.', agent: res.agent }]);
+    }).catch(e => console.error('Ask about keyword failed:', e));
+  }, [session.id, subject.name]);
 
   const handleUnifiedSend = async (text: string, attachments: Attachment[], type: 'note' | 'question' | 'todo') => {
     const newNote: Note = {
@@ -377,6 +433,19 @@ const SessionView: React.FC<SessionViewProps> = ({
                   Upload Context (PDF/Text)
                   <input type="file" onChange={handleFileUpload} className="hidden" accept=".txt,.md,.json,.csv" />
                 </label>
+                {/* STT Provider Toggle */}
+                <div className="flex items-center gap-2">
+                  <Mic className="w-3 h-3 opacity-30" />
+                  <select
+                    value={sttProvider}
+                    onChange={e => setSTTProvider(e.target.value as STTProvider)}
+                    disabled={isRecording}
+                    className="text-[9px] font-bold uppercase tracking-wider bg-black/5 border-none rounded-lg px-2 py-1 outline-none cursor-pointer disabled:opacity-30 text-black/50"
+                  >
+                    <option value="deepgram">Deepgram Nova-2</option>
+                    <option value="google-chirp">Google Chirp</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="md:col-span-3 glass-card-2026 p-3 flex items-center gap-4 h-[72px]">
@@ -399,6 +468,7 @@ const SessionView: React.FC<SessionViewProps> = ({
         <aside className="lg:col-span-4 space-y-6 order-2">
           <QAConsole
             suggestedQuestions={suggestedQuestions}
+            liveQuestions={liveQuestions}
             messages={consoleMessages}
             onMessagesChange={setConsoleMessages}
             onExpand={() => setConsoleModalOpen(true)}
@@ -418,6 +488,13 @@ const SessionView: React.FC<SessionViewProps> = ({
                 return { text: fallbackRes, agent: 'ResearchAgent' };
               }
             }}
+          />
+
+          <LiveContextPanel
+            transcription={transcription}
+            subjectName={subject.name}
+            onConceptsExtracted={handleLiveConceptsExtracted}
+            onAskAbout={handleAskAboutKeyword}
           />
 
           <AgentControlCenter
