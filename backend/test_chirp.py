@@ -74,13 +74,16 @@ def test_chirp():
         from google.cloud import speech_v2 as speech
 
         project_id = os.environ.get("GCP_PROJECT", "mba-copilot-485805")
-        location = "global"
+        location = "us-central1"
 
-        client = speech.SpeechClient()
+        # chirp_2 is only in us-central1, use regional endpoint
+        client = speech.SpeechClient(
+            client_options={"api_endpoint": f"{location}-speech.googleapis.com"}
+        )
 
         config = speech.RecognitionConfig(
             auto_decoding_config=speech.AutoDetectDecodingConfig(),
-            language_codes=["en-IN", "hi-IN"],
+            language_codes=["en-IN"],  # Single lang for us-central1; en-IN handles Hinglish
             model="chirp_2",
             features=speech.RecognitionFeatures(
                 enable_automatic_punctuation=True,
@@ -111,7 +114,7 @@ def test_chirp():
                 # Show word timestamps
                 if alt.words:
                     for w in alt.words[:5]:  # first 5 words
-                        log(f"     🔤 '{w.word}' @ {w.start_offset.total_seconds():.1f}s - {w.end_offset.total_seconds():.1f}s")
+                        log(f"     🔤 '{w.word}' @ {w.start_offset.ToNanoseconds()/1e9:.1f}s - {w.end_offset.ToNanoseconds()/1e9:.1f}s")
 
         full_transcript = " ".join(transcript_parts)
         log(f"")

@@ -146,9 +146,12 @@ async def transcribe_audio(
         from google.cloud import speech_v2 as speech
         
         project_id = os.environ.get("GCP_PROJECT", "mba-copilot-485805")
-        location = "global"  # Chirp requires global, not regional
+        location = "us-central1"  # chirp_2 only available here
         
-        client = speech.SpeechClient()
+        # Regional endpoint for chirp_2
+        client = speech.SpeechClient(
+            client_options={"api_endpoint": f"{location}-speech.googleapis.com"}
+        )
         
         # Read the uploaded audio file
         audio_content = await audio.read()
@@ -156,7 +159,7 @@ async def transcribe_audio(
         # Configure the recognition request
         config = speech.RecognitionConfig(
             auto_decoding_config=speech.AutoDetectDecodingConfig(),
-            language_codes=[language, "hi-IN"],  # Primary + Hindi for code-switching
+            language_codes=[language],  # Single lang for us-central1; en-IN handles Hinglish
             model=model,
             features=speech.RecognitionFeatures(
                 enable_automatic_punctuation=True,
