@@ -146,7 +146,7 @@ async def transcribe_audio(
         from google.cloud import speech_v2 as speech
         
         project_id = os.environ.get("GCP_PROJECT", "mba-copilot-485805")
-        location = os.environ.get("GCP_LOCATION", "us-central1")
+        location = "global"  # Chirp requires global, not regional
         
         client = speech.SpeechClient()
         
