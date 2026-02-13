@@ -2,11 +2,11 @@
     "rewrites": [
         {
             "source": "/api/agent/:path*",
-            "destination": "https://vidyos-backend-ip42va3fma-uc.a.run.app/api/agent/:path*"
+            "destination": "https://vidyos-backend-1066396672407.us-central1.run.app/api/agent/:path*"
         },
         {
             "source": "/api/gemini",
-            "destination": "https://vidyos-backend-ip42va3fma-uc.a.run.app/api/gemini"
+            "destination": "https://vidyos-backend-1066396672407.us-central1.run.app/api/gemini"
         },
         {
             "source": "/(.*)",
