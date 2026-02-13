@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { Share2, Maximize2, BookOpen, Lightbulb, Calculator, TrendingUp, Download, ZoomIn, ZoomOut, Minimize2, Search, Filter, Route, FileText, Clock, Network } from 'lucide-react';
+import { Share2, Maximize2, BookOpen, Lightbulb, Calculator, TrendingUp, Download, ZoomIn, ZoomOut, Minimize2, Search, Filter, Route, FileText, Clock, Network, Sparkles } from 'lucide-react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { masterIntelligence } from '../services/intelligence';
 
 interface Concept {
     keyword: string;
@@ -13,6 +14,8 @@ interface Concept {
 interface KnowledgeGraphProps {
     concepts: Concept[];
     isSyncing?: boolean;
+    sessionId?: string;
+    onAgentResponse?: (res: any) => void;
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -119,7 +122,7 @@ const calculateSimilarity = (text1: string, text2: string): number => {
     return intersection.size / Math.max(words1.size, words2.size, 1);
 };
 
-const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyncing = false }) => {
+const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyncing = false, sessionId, onAgentResponse }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
@@ -697,8 +700,34 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                             </div>
                         </div>
                     </div>
-                    <div className="text-sm text-black/70 leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar">
+                    <div className="text-sm text-black/70 leading-relaxed max-h-[150px] overflow-y-auto custom-scrollbar mb-6">
                         {renderTextWithFormulas(selectedNode.explanation)}
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={async () => {
+                                if (!sessionId) return;
+                                try {
+                                    const res = await masterIntelligence.askMasterMind(
+                                        `Tell me more about ${selectedNode.label} and how it relates to our lecture.`,
+                                        sessionId,
+                                        selectedNode.label
+                                    );
+                                    if (onAgentResponse) {
+                                        onAgentResponse(res);
+                                    } else {
+                                        alert(`MasterMind response: ${res.response}`);
+                                    }
+                                } catch (e) {
+                                    alert("MasterMind error");
+                                }
+                            }}
+                            className="flex-1 py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/10"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Deep Dive with MasterMind
+                        </button>
                     </div>
                 </div>
             )}

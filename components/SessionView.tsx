@@ -10,6 +10,7 @@ import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
 import UnifiedInput from './UnifiedInput';
 import { Maximize2, Sparkles, X } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { masterIntelligence } from '../services/intelligence';
 import { CREDIT_COSTS } from '../constants/pricing';
 import { useNotificationStore } from '../stores/useNotificationStore';
@@ -18,6 +19,7 @@ import { useTranscription } from '../hooks/useTranscription';
 import { useSessionSync } from '../hooks/useSessionSync';
 
 const KnowledgeGraph = React.lazy(() => import('./EnhancedKnowledgeGraph'));
+import DynamicCard from './DynamicCard';
 
 interface SessionViewProps {
   session: Session;
@@ -59,6 +61,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   const [transcriptModalOpen, setTranscriptModalOpen] = useState(false);
   const [consoleModalOpen, setConsoleModalOpen] = useState(false);
   const [graphModalOpen, setGraphModalOpen] = useState(false);
+  const [activeAgentResponse, setActiveAgentResponse] = useState<any>(null);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -269,7 +272,7 @@ const SessionView: React.FC<SessionViewProps> = ({
             </div>
             <div className="h-48 rounded-2xl overflow-hidden bg-black/[0.01]">
               <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center text-[9px] font-black uppercase opacity-20">Loading Map...</div>}>
-                <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+                <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} sessionId={session.id} onAgentResponse={setActiveAgentResponse} />
               </React.Suspense>
             </div>
           </div>
@@ -305,6 +308,25 @@ const SessionView: React.FC<SessionViewProps> = ({
               onExport={() => {/* Export Logic */ }}
             />
           </section>
+
+          <AnimatePresence>
+            {activeAgentResponse && (
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[100] scale-110">
+                <button
+                  onClick={() => setActiveAgentResponse(null)}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center z-[110] shadow-xl"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <DynamicCard
+                  type={activeAgentResponse.type || 'text'}
+                  payload={activeAgentResponse.payload || { text: activeAgentResponse.response }}
+                  agentName={activeAgentResponse.agent || 'MasterMind'}
+                />
+              </div>
+            )}
+          </AnimatePresence>
+
           <div className="space-y-2">
             <UnifiedInput onSend={handleUnifiedSend} placeholder="Ground a note or upload slide..." isLive={isRecording} />
             <div className="flex justify-between items-center px-2">
@@ -325,8 +347,24 @@ const SessionView: React.FC<SessionViewProps> = ({
             onAskAI={async (query) => {
               const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Doubt Resolution');
               if (!charged) return "Insufficient credits.";
-              const context = transcription.slice(-10).map(t => t.text).join(' ');
-              return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+
+              try {
+                // Use MasterMind instead of raw Perplexity for context-aware routing
+                const res = await masterIntelligence.askMasterMind(query, session.id);
+
+                // If it's a rich response (image, research, etc.), trigger the DynamicCard
+                if (res.type && res.type !== 'text') {
+                  setActiveAgentResponse(res);
+                  return res.response || "I've generated a rich visualization for you.";
+                }
+
+                return res.response;
+              } catch (e) {
+                console.error("MasterMind Error:", e);
+                // Fallback to Perplexity for reliability
+                const context = transcription.slice(-10).map(t => t.text).join(' ');
+                return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+              }
             }}
           />
           {insight && (
@@ -361,7 +399,7 @@ const SessionView: React.FC<SessionViewProps> = ({
       <ExpandableModal isOpen={graphModalOpen} onClose={() => setGraphModalOpen(false)} title="Neural Map">
         <div className="h-[70vh] w-full bg-black/[0.01] rounded-3xl overflow-hidden relative">
           <React.Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-            <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} />
+            <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} sessionId={session.id} onAgentResponse={setActiveAgentResponse} />
           </React.Suspense>
         </div>
       </ExpandableModal>

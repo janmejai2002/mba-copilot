@@ -7,31 +7,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { model, contents, config } = req.body;
-    const customKey = req.headers['x-custom-gemini-key'] as string;
-    const apiKey = customKey || process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Gemini API key not configured. Please provide one in Settings.' });
-    }
+    // Backend URL (Cloud Run Production is preferred)
+    const BACKEND_URL = process.env.VITE_API_URL ||
+        process.env.API_URL ||
+        'https://vidyos-backend-1066396672407.us-central1.run.app';
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const aiModel = genAI.getGenerativeModel({ model: model || 'gemini-1.5-flash' });
-
-        // Convert to the format expected by the SDK
-        const result = await aiModel.generateContent({
-            contents: [{ role: 'user', parts: [{ text: contents }] }],
-            generationConfig: config
+        const response = await fetch(`${BACKEND_URL}/api/gemini`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Custom-Gemini-Key': req.headers['x-custom-gemini-key'] as string || ''
+            },
+            body: JSON.stringify({
+                model: model || 'gemini-1.5-flash',
+                contents: contents,
+                config: config
+            })
         });
 
-        const response = await result.response;
-        const text = response.text();
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Backend Response Error [${response.status}]:`, errorText);
 
-        return res.status(200).json({ text });
+            // If it's a 401/403, it might mean the Cloud Run IAM policy is too restrictive
+            if (response.status === 401 || response.status === 403) {
+                return res.status(response.status).json({
+                    error: 'Backend Authentication Error',
+                    details: 'The Cloud Run backend rejected the request. Please ensure it allows unauthenticated invocations.'
+                });
+            }
+
+            throw new Error(`Backend Error: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+        return res.status(200).json(data);
+
     } catch (error: any) {
-        console.error('Gemini API Error:', error);
-        const status = error.status || 500;
-        const message = error.message || 'Failed to call Gemini API';
-        return res.status(status).json({ error: message, details: error.toString() });
+        console.error('Gemini Proxy Error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to call Backend API' });
     }
 }

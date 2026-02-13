@@ -79,9 +79,13 @@ const syncToDrive = async () => {
             console.log("✅ Drive Sync Complete");
         } catch (e: any) {
             console.error("GDrive Sync Failed:", e);
-            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
-                console.log("🔄 Triggering Re-Auth due to 403/401...");
-                authErrorCallback(e.message);
+            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS') {
+                console.warn("⚠️ GDrive Sync Unauthorized (401). Background sync paused. Token may be expired.");
+                // We DON'T call authErrorCallback here to avoid immediate logout during work.
+                // Re-auth will be handled naturally on next full app reload or explicit auth action.
+            } else if (e.message === 'DRIVE_FORBIDDEN') {
+                console.warn("⚠️ GDrive Sync Forbidden (403). Possible permission or ownership mismatch.");
+                gdriveFileId = null; // Clear ID to force a re-discovery next time
             }
         }
     }, 30000); // 30 second debounce
@@ -131,8 +135,9 @@ export const storage = {
             }
             return false;
         } catch (e: any) {
-            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' && authErrorCallback) {
-                authErrorCallback(e.message);
+            if (e.message === 'UNAUTHORIZED_DRIVE_ACCESS' || e.message === 'DRIVE_FORBIDDEN') {
+                console.warn(`⚠️ GDrive Pull failed: ${e.message}. Using local data.`);
+                gdriveFileId = null;
             }
             return false;
         }

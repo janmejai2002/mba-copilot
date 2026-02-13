@@ -5,10 +5,6 @@
             "destination": "https://vidyos-backend-1066396672407.us-central1.run.app/api/agent/$1"
         },
         {
-            "source": "/api/gemini",
-            "destination": "https://vidyos-backend-1066396672407.us-central1.run.app/api/gemini"
-        },
-        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

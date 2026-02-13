@@ -52,11 +52,19 @@ export const googleDrive = {
             });
 
             if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    // 403 can also mean token issues in Drive API context
+                const errorData = await response.json();
+                console.error('Google Drive API Error Response:', errorData);
+
+                if (response.status === 401) {
                     throw new Error('UNAUTHORIZED_DRIVE_ACCESS');
                 }
-                const errorData = await response.json();
+                if (response.status === 403) {
+                    // Check if it's a quota issue or just forbidden
+                    const reason = errorData.error?.errors?.[0]?.reason || 'forbidden';
+                    console.warn(`Drive 403 Forbidden: ${reason}`);
+                    throw new Error('DRIVE_FORBIDDEN');
+                }
+
                 if (response.status === 404 && existingFileId) {
                     console.warn(`File ${existingFileId} not found (404). Creating new...`);
                     return this.saveToAppData(accessToken, fileName, content);
@@ -67,7 +75,7 @@ export const googleDrive = {
             return await response.json();
         } catch (error: any) {
             console.error('Error saving to Google Drive:', error);
-            if (error.message === 'UNAUTHORIZED_DRIVE_ACCESS') {
+            if (error.message === 'UNAUTHORIZED_DRIVE_ACCESS' || error.message === 'DRIVE_FORBIDDEN') {
                 throw error; // Re-throw for db.ts to handle
             }
             return null;

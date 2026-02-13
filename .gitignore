@@ -13,10 +13,18 @@ dist-ssr
 .env
 *.local
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+backend/.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -24,5 +32,7 @@ dist-ssr
 *.sln
 *.sw?
 
-.vercel
-testing_suite/*
+# Cloud & Deployment
+.vercel/
+.gcloudignore
+testing_suite/

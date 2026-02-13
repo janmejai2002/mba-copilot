@@ -57,6 +57,34 @@ class MasterIntelligenceService {
     }
 
     /**
+     * Sends a message to the MasterMind LangGraph.
+     * This triggers the full agentic multi-turn workflow on the backend.
+     */
+    public async askMasterMind(message: string, sessionId: string, userFocus?: string): Promise<any> {
+        console.log("🧠 Consulting MasterMind...");
+        try {
+            const response = await fetch('/api/agent/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message,
+                    session_id: sessionId,
+                    user_context: {
+                        current_page: 'SessionView',
+                        user_focus: userFocus || 'None'
+                    }
+                })
+            });
+
+            if (!response.ok) throw new Error("MasterMind call failed");
+            return await response.json();
+        } catch (error) {
+            console.error("MasterMind consultation failed:", error);
+            throw error;
+        }
+    }
+
+    /**
      * Identifies logical links between concepts based on timestamps
      */
     public async mapTimelineConnections(concepts: Concept[], transcript: TranscriptionTurn[]): Promise<any[]> {
