@@ -8,8 +8,19 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 // @ts-ignore
 import rehypeKatex from 'rehype-katex';
-import { Send, Sparkles, Maximize2, ChevronDown } from 'lucide-react';
+import { Send, Sparkles, Maximize2, ChevronDown, GraduationCap, Search, Map, PenTool, Palette, Headphones, ShieldCheck, Brain } from 'lucide-react';
 import 'katex/dist/katex.min.css';
+
+const AGENT_ICONS: Record<string, any> = {
+    'ScribeAgent': PenTool,
+    'NavigatorAgent': Map,
+    'ResearchAgent': Search,
+    'ProfessorAgent': GraduationCap,
+    'ArtistAgent': Palette,
+    'ComposerAgent': Headphones,
+    'CurriculumMaster': ShieldCheck,
+    'MasterMind': Brain
+};
 
 // Basic preprocessor to ensure common patterns are recognized by remark-math
 const preprocessMarkdown = (text: string) => {
@@ -26,13 +37,19 @@ const preprocessMarkdown = (text: string) => {
         .replace(/\[Transcript[^\]]*\]/g, '');
 };
 
+export interface QAMessage {
+    role: 'user' | 'ai';
+    text: string;
+    agent?: string;
+}
+
 interface QAConsoleProps {
-    onAskAI: (query: string) => Promise<string | undefined>;
+    onAskAI: (query: string) => Promise<{ text: string; agent?: string } | string | undefined>;
     suggestedQuestions?: string[];
     onExecuteSuggested?: (question: string) => void;
     onExpand?: () => void;
-    messages?: { role: 'user' | 'ai'; text: string }[];
-    onMessagesChange?: React.Dispatch<React.SetStateAction<{ role: 'user' | 'ai'; text: string }[]>>;
+    messages?: QAMessage[];
+    onMessagesChange?: React.Dispatch<React.SetStateAction<QAMessage[]>>;
 }
 
 const QAConsole: React.FC<QAConsoleProps> = ({
@@ -44,7 +61,7 @@ const QAConsole: React.FC<QAConsoleProps> = ({
     onMessagesChange
 }) => {
     const [query, setQuery] = useState('');
-    const [internalMessages, setInternalMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+    const [internalMessages, setInternalMessages] = useState<QAMessage[]>([]);
     const [isThinking, setIsThinking] = useState(false);
     const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
 
@@ -75,9 +92,13 @@ const QAConsole: React.FC<QAConsoleProps> = ({
         setIsThinking(true);
 
         try {
-            const response = await onAskAI(finalQuery);
-            if (response) {
-                setMessages(prev => [...prev, { role: 'ai', text: response }]);
+            const result = await onAskAI(finalQuery);
+            if (result) {
+                if (typeof result === 'string') {
+                    setMessages(prev => [...prev, { role: 'ai', text: result }]);
+                } else {
+                    setMessages(prev => [...prev, { role: 'ai', text: result.text, agent: result.agent }]);
+                }
             }
         } catch (error) {
             console.error('AI Error:', error);
@@ -118,29 +139,40 @@ const QAConsole: React.FC<QAConsoleProps> = ({
                     </div>
                 )}
 
-                {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        {msg.role === 'ai' && (
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                                <Sparkles className="w-3.5 h-3.5 text-white" />
-                            </div>
-                        )}
-                        <div className={`max-w-[80%] ${msg.role === 'user' ? 'bg-black text-white' : 'bg-[#f5f5f7] text-black'} px-4 py-3 rounded-2xl text-[11px] leading-relaxed font-medium shadow-sm`}>
-                            {msg.role === 'ai' ? (
-                                <div className="markdown-content">
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm, remarkMath]}
-                                        rehypePlugins={[rehypeKatex]}
-                                    >
-                                        {preprocessMarkdown(msg.text)}
-                                    </ReactMarkdown>
+                {messages.map((msg, i) => {
+                    const AgentIcon = msg.agent ? (AGENT_ICONS[msg.agent] || Sparkles) : Sparkles;
+                    return (
+                        <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.role === 'ai' && (
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className={`w-7 h-7 rounded-full ${msg.agent ? 'bg-black text-white' : 'bg-gradient-to-br from-purple-500 to-purple-600'} flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20`}>
+                                        <AgentIcon className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-[7px] font-black uppercase tracking-tighter opacity-30">{msg.agent?.replace('Agent', '') || 'AI'}</span>
                                 </div>
-                            ) : (
-                                msg.text
                             )}
+                            <div className={`max-w-[80%] ${msg.role === 'user' ? 'bg-black text-white' : 'bg-[#f5f5f7] text-black'} px-4 py-3 rounded-2xl text-[11px] leading-relaxed font-medium shadow-sm transition-all hover:shadow-md relative overflow-hidden group`}>
+                                {msg.agent && (
+                                    <div className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-[8px] font-black uppercase text-black/20 tracking-widest">{msg.agent}</span>
+                                    </div>
+                                )}
+                                {msg.role === 'ai' ? (
+                                    <div className="markdown-content">
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm, remarkMath]}
+                                            rehypePlugins={[rehypeKatex]}
+                                        >
+                                            {preprocessMarkdown(msg.text)}
+                                        </ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    msg.text
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {isThinking && (
                     <div className="flex gap-4 justify-start">

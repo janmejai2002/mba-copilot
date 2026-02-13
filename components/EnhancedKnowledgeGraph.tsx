@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { Share2, Maximize2, BookOpen, Lightbulb, Calculator, TrendingUp, Download, ZoomIn, ZoomOut, Minimize2, Search, Filter, Route, FileText, Clock, Network, Sparkles } from 'lucide-react';
+import { Share2, Maximize2, BookOpen, Lightbulb, Calculator, TrendingUp, Download, ZoomIn, ZoomOut, Minimize2, Search, Filter, Route, FileText, Clock, Network, Sparkles, X } from 'lucide-react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { masterIntelligence } from '../services/intelligence';
@@ -213,30 +213,24 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
         });
     }, [nodes, searchQuery, filterCategory]);
 
-    // Generate learning path (topological sort based on chronology and connections)
+    // Generate learning path
     const generateLearningPath = () => {
         if (nodes.length === 0) return [];
-
-        // Sort by timestamp (chronological order) and importance
         const sorted = [...nodes].sort((a, b) => {
-            // Prioritize foundational concepts (high importance, early timestamp)
             const importanceDiff = (b.importance || 0) - (a.importance || 0);
             if (Math.abs(importanceDiff) > 2) return importanceDiff;
             return a.timestamp - b.timestamp;
         });
-
         return sorted.map(n => n.id);
     };
 
     useEffect(() => {
         if (!containerRef.current) return;
-
         const observer = new ResizeObserver((entries) => {
             if (!entries.length) return;
             const { width, height } = entries[0].contentRect;
             setDimensions({ width, height });
         });
-
         observer.observe(containerRef.current);
         return () => observer.disconnect();
     }, []);
@@ -245,24 +239,19 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
         if (!svgRef.current || dimensions.width === 0 || filteredNodes.length === 0) return;
 
         const { width, height } = dimensions;
-
-        // Clear previous graph
         d3.select(svgRef.current).selectAll('*').remove();
 
-        // Filter links to only include filtered nodes
         const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
         const filteredLinks = links.filter(l =>
             filteredNodeIds.has((l.source as any).id || l.source as string) &&
             filteredNodeIds.has((l.target as any).id || l.target as string)
         );
 
-        // Create SVG
         const svg = d3.select(svgRef.current)
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', [0, 0, width, height]);
 
-        // Add zoom behavior
         const g = svg.append('g');
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
@@ -271,7 +260,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             });
         svg.call(zoom);
 
-        // Create force simulation
         const simulation = d3.forceSimulation<GraphNode>(filteredNodes)
             .force('link', d3.forceLink<GraphNode, GraphLink>(filteredLinks)
                 .id(d => d.id)
@@ -283,7 +271,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             .force('x', d3.forceX(width / 2).strength(0.05))
             .force('y', d3.forceY(height / 2).strength(0.05));
 
-        // Draw links
         const link = g.append('g')
             .selectAll('line')
             .data(filteredLinks)
@@ -306,7 +293,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             })
             .attr('stroke-width', d => 1 + d.strength * 4);
 
-        // Draw nodes
         const node = g.append('g')
             .selectAll('g')
             .data(filteredNodes)
@@ -328,7 +314,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                     d.fy = null;
                 }));
 
-        // Node Glow/Pulse for Syncing
         const nodeGlow = node.append('circle')
             .attr('r', 25)
             .attr('fill', '#14b8a6')
@@ -340,11 +325,17 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                 .transition()
                 .duration(2000)
                 .attr('opacity', 0.2)
-                .style('filter', 'blur(4px)')
-                .attr('r', 35);
+                .style('filter', 'blur(6px)')
+                .attr('r', 40);
+
+            node.filter((d: any) => d.importance > 2)
+                .append('circle')
+                .attr('r', 2)
+                .attr('fill', '#fff')
+                .attr('class', 'animate-ping')
+                .style('opacity', 0.8);
         }
 
-        // Node circles with size based on importance
         node.append('circle')
             .attr('r', d => 15 + (d.importance || 0) * 2)
             .attr('fill', d => highlightedPath.includes(d.id) ? d.color : d.color + 'cc')
@@ -360,7 +351,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                     .duration(200)
                     .attr('r', 15 + (d.importance || 0) * 2 + 5);
 
-                // Highlight connected nodes
                 const connectedIds = new Set<string>();
                 filteredLinks.forEach(l => {
                     const sourceId = (l.source as GraphNode).id || l.source as string;
@@ -387,7 +377,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                 link.attr('opacity', l => 0.2 + l.strength * 0.6);
             });
 
-        // Importance indicator (ring for highly connected nodes)
         node.filter(d => (d.importance || 0) > 3)
             .append('circle')
             .attr('r', d => 20 + (d.importance || 0) * 2)
@@ -398,7 +387,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             .attr('opacity', 0.3)
             .style('pointer-events', 'none');
 
-        // Node labels
         node.append('text')
             .text(d => d.label.length > 20 ? d.label.substring(0, 20) + '...' : d.label)
             .attr('text-anchor', 'middle')
@@ -408,7 +396,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             .attr('fill', '#1f2937')
             .style('pointer-events', 'none');
 
-        // Learning path indicators
         if (showLearningPath && highlightedPath.length > 0) {
             node.filter(d => highlightedPath.includes(d.id))
                 .append('text')
@@ -421,7 +408,6 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                 .style('pointer-events', 'none');
         }
 
-        // Update positions on tick
         simulation.on('tick', () => {
             link
                 .attr('x1', d => (d.source as GraphNode).x!)
@@ -432,11 +418,10 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
             node.attr('transform', d => `translate(${d.x},${d.y})`);
         });
 
-        // Cleanup
         return () => {
             simulation.stop();
         };
-    }, [filteredNodes, links, dimensions.width, dimensions.height, highlightedPath, showLearningPath]);
+    }, [filteredNodes, links, dimensions.width, dimensions.height, highlightedPath, showLearningPath, isSyncing]);
 
     const handleZoomIn = () => {
         const svg = d3.select(svgRef.current);
@@ -505,20 +490,8 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
         URL.revokeObjectURL(url);
     };
 
-    const toggleLearningPath = () => {
-        if (!showLearningPath) {
-            const path = generateLearningPath();
-            setHighlightedPath(path);
-            setShowLearningPath(true);
-        } else {
-            setHighlightedPath([]);
-            setShowLearningPath(false);
-        }
-    };
-
     return (
         <div className="apple-card overflow-hidden flex flex-col h-full bg-white/50 backdrop-blur-xl">
-            {/* Header */}
             <div className="flex flex-col gap-4 p-6 border-b border-black/[0.04]">
                 <div className="flex justify-between items-center">
                     <div>
@@ -532,38 +505,13 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                         <span className="px-2 py-0.5 bg-black/[0.03] text-black/40 text-[8px] font-bold rounded-full border border-black/[0.03]">
                             {filteredNodes.length}/{nodes.length} Nodes
                         </span>
-                        <button
-                            onClick={handleZoomIn}
-                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
-                            title="Zoom in"
-                        >
-                            <ZoomIn className="w-3 h-3 text-black/30" />
-                        </button>
-                        <button
-                            onClick={handleZoomOut}
-                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
-                            title="Zoom out"
-                        >
-                            <ZoomOut className="w-3 h-3 text-black/30" />
-                        </button>
-                        <button
-                            onClick={handleAutoFit}
-                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
-                            title="Fit neural map"
-                        >
-                            <Route className="w-3.5 h-3.5 text-purple-500" />
-                        </button>
-                        <button
-                            onClick={handleReset}
-                            className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
-                            title="Reset view"
-                        >
-                            <Minimize2 className="w-3 h-3 text-black/30" />
-                        </button>
+                        <button onClick={handleZoomIn} className="p-1.5 hover:bg-black/5 rounded-lg transition-all" title="Zoom in"><ZoomIn className="w-3 h-3 text-black/30" /></button>
+                        <button onClick={handleZoomOut} className="p-1.5 hover:bg-black/5 rounded-lg transition-all" title="Zoom out"><ZoomOut className="w-3 h-3 text-black/30" /></button>
+                        <button onClick={handleAutoFit} className="p-1.5 hover:bg-black/5 rounded-lg transition-all" title="Fit neural map"><Route className="w-3.5 h-3.5 text-purple-500" /></button>
+                        <button onClick={handleReset} className="p-1.5 hover:bg-black/5 rounded-lg transition-all" title="Reset view"><Minimize2 className="w-3 h-3 text-black/30" /></button>
                     </div>
                 </div>
 
-                {/* Functional Controls */}
                 <div className="flex flex-wrap gap-2">
                     <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-black/30" />
@@ -586,96 +534,62 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                         <option value="example">Examples</option>
                         <option value="trend">Trends</option>
                     </select>
-                    <div
-                        className="relative group"
-                        onMouseEnter={() => setShowLearningPath(true)}
-                        onMouseLeave={() => setShowLearningPath(false)}
-                    >
-                        <button
-                            className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04]"
-                        >
+                    <div className="relative group" onMouseEnter={() => { const path = generateLearningPath(); setHighlightedPath(path); setShowLearningPath(true); }} onMouseLeave={() => { setHighlightedPath([]); setShowLearningPath(false); }}>
+                        <button className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04]">
                             <Route className="w-3 h-3" />
-                            Learning Path
+                            Knowledge Vault
                         </button>
                         {showLearningPath && highlightedPath.length > 0 && (
-                            <div className="absolute top-full mt-2 left-0 bg-white border border-black/10 rounded-xl shadow-2xl p-4 z-50 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-black/40 mb-2">Recommended Study Order</p>
-                                <div className="space-y-1">
+                            <div className="absolute top-full mt-2 left-0 bg-white/90 backdrop-blur-2xl border border-purple-200 rounded-2xl shadow-2xl p-6 z-[100] min-w-[280px] animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Sparkles className="w-4 h-4 text-purple-600" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-900 leading-none">Curated Learning Path</p>
+                                </div>
+                                <div className="space-y-3 relative">
+                                    <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-gradient-to-b from-purple-200 to-transparent" />
                                     {highlightedPath.map((nodeId, idx) => {
                                         const node = nodes.find(n => n.id === nodeId);
                                         return node ? (
-                                            <div key={idx} className="text-[10px] font-medium text-black/70 flex items-center gap-2">
-                                                <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-[8px] font-black">{idx + 1}</span>
-                                                {node.label}
+                                            <div key={idx} className="text-[11px] font-extrabold text-black/80 flex items-center gap-4 group/item">
+                                                <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[9px] font-black z-10 shadow-lg shadow-purple-200 group-hover/item:scale-125 transition-transform">{idx + 1}</span>
+                                                <span className="group-hover/item:text-purple-600 transition-colors">{node.label}</span>
                                             </div>
                                         ) : null;
                                     })}
                                 </div>
+                                <p className="mt-6 text-[8px] font-bold text-black/30 uppercase tracking-widest leading-relaxed">Adaptive sequence generated <br /> via semantic density analysis</p>
                             </div>
                         )}
                     </div>
-                    <button
-                        onClick={exportStudyGuide}
-                        className="px-4 py-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2"
-                    >
-                        <FileText className="w-3 h-3" />
-                        Export Guide
-                    </button>
+                    <button onClick={exportStudyGuide} className="px-4 py-2 bg-black/[0.02] text-black/60 hover:bg-black/[0.04] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2"><FileText className="w-3 h-3" />Export Guide</button>
                 </div>
             </div>
 
-            {/* Legend */}
             {concepts.length > 0 && (
                 <div className="px-6 py-3 border-b border-black/[0.04] flex flex-wrap gap-x-4 gap-y-2 text-[8px] font-bold uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
-                        <span className="text-black/30">Concept</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
-                        <span className="text-black/30">Formula</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
-                        <span className="text-black/30">Example</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }} />
-                        <span className="text-black/30">Trend</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 whitespace-nowrap ml-4">
-                        <div className="w-3 h-3 rounded-full border-2 border-dashed border-black/30" />
-                        <span className="text-black/30">Highly Connected</span>
-                    </div>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }} /><span className="text-black/30">Concept</span></div>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} /><span className="text-black/30">Formula</span></div>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} /><span className="text-black/30">Example</span></div>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }} /><span className="text-black/30">Trend</span></div>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap ml-4"><div className="w-3 h-3 rounded-full border-2 border-dashed border-black/30" /><span className="text-black/30">Highly Connected</span></div>
                 </div>
             )}
 
-            {/* Graph Canvas */}
             <div ref={containerRef} className="flex-1 relative bg-gradient-to-br from-indigo-50/30 via-purple-50/20 to-pink-50/30">
                 {concepts.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-30 p-8">
                         <Network className="w-16 h-16 mb-4 text-purple-500" strokeWidth={1.5} />
-                        <p className="text-sm font-bold uppercase tracking-widest leading-loose text-black/40">
-                            Listening for Concepts
-                        </p>
-                        <p className="text-[10px] text-black/20 mt-2 max-w-xs">
-                            The graph will build automatically as concepts are discovered in your lecture
-                        </p>
+                        <p className="text-sm font-bold uppercase tracking-widest leading-loose text-black/40">Listening for Concepts</p>
+                        <p className="text-[10px] text-black/20 mt-2 max-w-xs">The graph will build automatically as concepts are discovered in your lecture</p>
                     </div>
                 ) : (
                     <svg ref={svgRef} className="w-full h-full" />
                 )}
             </div>
 
-            {/* Selected Node Detail */}
             {selectedNode && (
                 <div className="absolute bottom-6 left-6 right-6 bg-white rounded-2xl shadow-2xl border border-black/10 p-6 animate-scale-in max-w-lg mx-auto">
-                    <button
-                        onClick={() => setSelectedNode(null)}
-                        className="absolute top-4 right-4 p-1 hover:bg-black/5 rounded-lg transition-all"
-                    >
-                        <Minimize2 className="w-4 h-4 text-black/40" />
-                    </button>
+                    <button onClick={() => setSelectedNode(null)} className="absolute top-4 right-4 p-1 hover:bg-black/5 rounded-lg transition-all"><X className="w-4 h-4 text-black/40" /></button>
                     <div className="flex items-start gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: selectedNode.color }}>
                             {selectedNode.category === 'formula' && <Calculator className="w-5 h-5 text-white" />}
@@ -686,63 +600,25 @@ const EnhancedKnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ concepts, isSyn
                         <div className="flex-1">
                             <h4 className="font-bold text-lg mb-1">{selectedNode.label}</h4>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="inline-block px-2 py-1 rounded-full text-[8px] font-bold uppercase tracking-wider"
-                                    style={{ backgroundColor: selectedNode.color + '20', color: selectedNode.color }}>
-                                    {selectedNode.category}
-                                </span>
-                                <span className="text-[9px] text-black/40 flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {new Date(selectedNode.timestamp).toLocaleTimeString()}
-                                </span>
-                                <span className="text-[9px] text-black/40">
-                                    {selectedNode.importance || 0} connections
-                                </span>
+                                <span className="inline-block px-2 py-1 rounded-full text-[8px] font-bold uppercase tracking-wider" style={{ backgroundColor: selectedNode.color + '20', color: selectedNode.color }}>{selectedNode.category}</span>
+                                <span className="text-[9px] text-black/40 flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(selectedNode.timestamp).toLocaleTimeString()}</span>
+                                <span className="text-[9px] text-black/40">{selectedNode.importance || 0} connections</span>
                             </div>
                         </div>
                     </div>
-                    <div className="text-sm text-black/70 leading-relaxed max-h-[150px] overflow-y-auto custom-scrollbar mb-6">
-                        {renderTextWithFormulas(selectedNode.explanation)}
-                    </div>
-
+                    <div className="text-sm text-black/70 leading-relaxed max-h-[150px] overflow-y-auto custom-scrollbar mb-6">{renderTextWithFormulas(selectedNode.explanation)}</div>
                     <div className="flex gap-3">
-                        <button
-                            onClick={async () => {
-                                if (!sessionId) return;
-                                try {
-                                    const res = await masterIntelligence.askMasterMind(
-                                        `Tell me more about ${selectedNode.label} and how it relates to our lecture.`,
-                                        sessionId,
-                                        selectedNode.label
-                                    );
-                                    if (onAgentResponse) {
-                                        onAgentResponse(res);
-                                    } else {
-                                        alert(`MasterMind response: ${res.response}`);
-                                    }
-                                } catch (e) {
-                                    alert("MasterMind error");
-                                }
-                            }}
-                            className="flex-1 py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/10"
-                        >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Deep Dive with MasterMind
+                        <button onClick={async () => {
+                            if (!sessionId) return;
+                            try {
+                                const res = await masterIntelligence.askMasterMind(`Tell me more about ${selectedNode.label} and how it relates to our lecture.`, sessionId, selectedNode.label);
+                                if (onAgentResponse) onAgentResponse(res);
+                                else alert(`MasterMind response: ${res.response}`);
+                            } catch (e) { alert("MasterMind error"); }
+                        }} className="flex-1 py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/10">
+                            <Sparkles className="w-3.5 h-3.5" /> Deep Dive with MasterMind
                         </button>
                     </div>
-                </div>
-            )}
-
-            {/* Learning Path Info */}
-            {showLearningPath && highlightedPath.length > 0 && (
-                <div className="absolute top-20 right-6 bg-white rounded-2xl shadow-xl border border-purple-200 p-4 max-w-xs animate-scale-in">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Route className="w-4 h-4 text-purple-600" />
-                        <h4 className="font-bold text-sm text-purple-900">Recommended Study Order</h4>
-                    </div>
-                    <p className="text-[10px] text-black/60 leading-relaxed">
-                        Follow the numbered path (1 → {highlightedPath.length}) for optimal learning.
-                        Foundational concepts are prioritized based on connections and chronology.
-                    </p>
                 </div>
             )}
         </div>

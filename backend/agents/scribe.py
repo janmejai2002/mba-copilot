@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from core.db import get_db_connection
+from core.state import AgentState
 
 class ScribeAgent:
     """
@@ -141,4 +142,23 @@ class ScribeAgent:
         finally:
             await conn.close()
 
+    async def run(self, state: AgentState):
+        """
+        Processes text for the graph.
+        """
+        messages = state["messages"]
+        last_message = messages[-1].content
+        session_id = state.get("user_context", {}).get("session_id", "default-session")
+
+        nodes = await self.process_transcript(session_id, last_message)
+        
+        return {
+            "messages": [f"ScribeAgent: Extracted {len(nodes)} new concepts into the knowledge vault."],
+            "payload": {"nodes": nodes}
+        }
+
+# Export for LangGraph
 scribe_agent = ScribeAgent()
+
+async def scribe_node(state: AgentState):
+    return await scribe_agent.run(state)

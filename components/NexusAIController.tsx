@@ -34,10 +34,20 @@ const NexusAIController: React.FC<NexusAIControllerProps> = ({ onCommand, isProc
                     />
 
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button type="button" className="p-2 hover:bg-white/10 rounded-xl transition-all" title="Identify Clusters">
+                        <button
+                            type="button"
+                            onClick={() => onCommand("Identify conceptual clusters and high-level patterns in this neural map.")}
+                            className="p-2 hover:bg-white/10 rounded-xl transition-all"
+                            title="Identify Clusters"
+                        >
                             <Target className="w-4 h-4 text-white/40 hover:text-[var(--vidyos-teal)]" />
                         </button>
-                        <button type="button" className="p-2 hover:bg-white/10 rounded-xl transition-all" title="Neural Burst">
+                        <button
+                            type="button"
+                            onClick={() => onCommand("Execute a neural burst: scan all nodes for deep semantic connections and prerequisites.")}
+                            className="p-2 hover:bg-white/10 rounded-xl transition-all"
+                            title="Neural Burst"
+                        >
                             <Zap className="w-4 h-4 text-white/40 hover:text-[var(--vidyos-teal)]" />
                         </button>
                     </div>

@@ -8,18 +8,21 @@ import TranscriptStream from './TranscriptStream';
 import SessionControls from './SessionControls';
 import AudioVisualizer from './AudioVisualizer';
 import ExpandableModal from './ExpandableModal';
-import UnifiedInput from './UnifiedInput';
-import { Maximize2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Layers, ShieldCheck, Sparkles, Layout, Network, Maximize2, Cpu, X, Activity } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { masterIntelligence } from '../services/intelligence';
+import AgentControlCenter from './AgentControlCenter';
+import { useUIStore } from '../stores/useUIStore';
 import { CREDIT_COSTS } from '../constants/pricing';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import { useBackgroundStore } from '../stores/useBackgroundStore';
 import { useTranscription } from '../hooks/useTranscription';
 import { useSessionSync } from '../hooks/useSessionSync';
+import { useKnowledgeStore } from '../stores/useKnowledgeStore';
 
 const KnowledgeGraph = React.lazy(() => import('./EnhancedKnowledgeGraph'));
 import DynamicCard from './DynamicCard';
+import UnifiedInput from './UnifiedInput';
 
 interface SessionViewProps {
   session: Session;
@@ -42,8 +45,10 @@ const SessionView: React.FC<SessionViewProps> = ({
   onExpand,
   consumeCredits
 }) => {
+  const { view, setView, navigateTo } = useUIStore();
   const { addNotification } = useNotificationStore();
   const setBackgroundState = useBackgroundStore(state => state.setState);
+  const importToKnowledgeStore = useKnowledgeStore(state => state.importConcepts);
 
   // High-level Domain State
   const [transcription, setTranscription] = useState<TranscriptionTurn[]>(session.turns || []);
@@ -58,12 +63,18 @@ const SessionView: React.FC<SessionViewProps> = ({
   // UI State
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [transcriptModalOpen, setTranscriptModalOpen] = useState(false);
   const [consoleModalOpen, setConsoleModalOpen] = useState(false);
   const [graphModalOpen, setGraphModalOpen] = useState(false);
   const [activeAgentResponse, setActiveAgentResponse] = useState<any>(null);
-
+  const [isConsoleExpanded, setIsConsoleExpanded] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  // Focus top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [session.id]);
 
   // Reset state when session changes
   useEffect(() => {
@@ -72,7 +83,7 @@ const SessionView: React.FC<SessionViewProps> = ({
     setNotes(session.notes || []);
     setConsoleMessages([]);
     setInsight(session.summary ? { summary: session.summary, examQuestions: session.examQuestions || [] } : null);
-  }, [session.id]); // Only trigger on ID change (new session)
+  }, [session.id]);
 
   // Hook: Transcription Engine
   const {
@@ -110,27 +121,39 @@ const SessionView: React.FC<SessionViewProps> = ({
     });
   }, []);
 
+  const handleRefine = async () => {
+    if (transcription.length === 0 || isRefining) return;
+    setIsRefining(true);
+    addNotification('AI Assistant is refining transcript...', 'info');
+    try {
+      const { refineTranscript } = await import('../services/gemini');
+      const refinedTurns = await refineTranscript(transcription);
+      if (refinedTurns && refinedTurns.length > 0) {
+        setTranscription(refinedTurns);
+        addNotification('Transcript refined and sorted', 'success');
+      }
+    } catch (err) {
+      console.error("Refinement failed:", err);
+      addNotification('Refinement failed', 'error');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
   const syncKnowledgeGraph = async () => {
     if (isSyncing || (transcription.length < 5 && consoleMessages.length === 0)) return;
     setIsSyncing(true);
-    setBackgroundState('syncing'); // Activate syncing visuals
+    setBackgroundState('syncing');
     addNotification('Synchronizing Neural Map...', 'info');
     try {
       const charged = await consumeCredits(CREDIT_COSTS.KNOWLEDGE_GRAPH_SYNC, 'Knowledge Graph Sync');
       if (!charged) return;
 
       const fullText = transcription.map(t => t.text).join('\n');
-      const chatContext = consoleMessages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
-
-      const prompt = `Analyze lecture data and return 3-5 key concepts as JSON array: [{keyword, explanation, theme, timestamp}]. Data: ${fullText.substring(0, 3000)}`;
-      const keywords = await extractKeywords(prompt);
+      const keywords = await extractKeywords(`Analyze lecture data and return 3-5 key concepts as JSON array: [{keyword, explanation, theme, timestamp}]. Data: ${fullText.substring(0, 3000)}`);
       const newConcepts = [...concepts];
 
-      // Type-safe iteration over extracted keywords
-      interface ExtractedKeyword { keyword: string; explanation: string; theme?: string; }
-      const typedKeywords = keywords as (string | ExtractedKeyword)[];
-
-      for (const resItem of typedKeywords) {
+      for (const resItem of (keywords as any[])) {
         const kw = typeof resItem === 'string' ? resItem : resItem.keyword;
         if (kw && !newConcepts.some(c => c.keyword.toLowerCase() === kw.toLowerCase())) {
           const explanation = typeof resItem === 'string' ? await explainConcept(kw, fullText) : resItem.explanation;
@@ -139,12 +162,19 @@ const SessionView: React.FC<SessionViewProps> = ({
       }
 
       setConcepts(newConcepts);
+
+      try {
+        await importToKnowledgeStore(newConcepts, session.id);
+      } catch (err) {
+        console.error("Failed to sync to Knowledge Vault:", err);
+      }
+
       addNotification('Neural Map Synced', 'success');
     } catch (e) {
       addNotification('Neural Sync Failed', 'error');
     } finally {
       setIsSyncing(false);
-      setBackgroundState('idle'); // Return to calm state
+      setBackgroundState('idle');
     }
   };
 
@@ -154,7 +184,7 @@ const SessionView: React.FC<SessionViewProps> = ({
     }
   }, [transcription.length]);
 
-  const handleUnifiedSend = (text: string, attachments: Attachment[], type: 'note' | 'question' | 'todo') => {
+  const handleUnifiedSend = async (text: string, attachments: Attachment[], type: 'note' | 'question' | 'todo') => {
     const newNote: Note = {
       id: crypto.randomUUID(),
       sessionId: session.id,
@@ -166,15 +196,24 @@ const SessionView: React.FC<SessionViewProps> = ({
     };
     setNotes(prev => [...prev, newNote]);
     if (text) updateTranscription('system', `[NOTE (${type}): ${text}]`);
+
+    if (type === 'question' && text.trim()) {
+      try {
+        const res = await masterIntelligence.askMasterMind(text, session.id);
+        if (res.type && res.type !== 'text') {
+          setActiveAgentResponse(res);
+        }
+        setConsoleMessages(prev => [...prev, { role: 'ai', text: res.response || "I've analyzed your question.", agent: res.agent }]);
+      } catch (e) {
+        console.error("Auto-AI response failed:", e);
+      }
+    }
   };
 
-  // Handle File Upload (Context)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     addNotification('Uploading context...', 'info');
-
     try {
       const text = await file.text();
       const groundingFile = {
@@ -184,15 +223,12 @@ const SessionView: React.FC<SessionViewProps> = ({
         data: text,
         size: file.size
       };
-
       const updatedSession = { ...session };
       updatedSession.groundingFileDetails = [...(updatedSession.groundingFileDetails || []), groundingFile];
-
       updateTranscription('system', `[Uploaded Context: ${file.name}]`);
       onUpdateSession(updatedSession);
       addNotification('✅ Context added to session', 'success');
     } catch (err) {
-      console.error(err);
       addNotification('Failed to read file', 'error');
     }
   };
@@ -202,14 +238,38 @@ const SessionView: React.FC<SessionViewProps> = ({
     setIsSummarizing(true);
     addNotification('Synthesizing Session Insights...', 'info');
     const fullText = transcription.map(t => t.text).join(' ');
+
+    if (fullText.length < 50) {
+      addNotification('Transcript too short for synthesis', 'warning');
+      setIsSummarizing(false);
+      return;
+    }
+
     try {
       const charged = await consumeCredits(CREDIT_COSTS.SESSION_SYNTHESIS, 'Session Synthesis');
-      if (!charged) return;
+      if (!charged) {
+        setIsSummarizing(false);
+        return;
+      }
       const res = await generateSessionInsight(fullText);
-      setInsight(res);
-      addNotification('Synthesis Complete', 'success');
+      if (res && res.summary) {
+        setInsight(res);
+        addNotification('Synthesis Complete', 'success');
+
+        // Auto-update session with results
+        const updatedSession = {
+          ...session,
+          summary: res.summary,
+          examQuestions: res.examQuestions,
+          updatedAt: Date.now()
+        };
+        onUpdateSession(updatedSession);
+      } else {
+        throw new Error("Invalid response format");
+      }
     } catch (err) {
-      addNotification('Synthesis Failed', 'error');
+      console.error("Synthesis error:", err);
+      addNotification('Synthesis Failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
     } finally {
       setIsSummarizing(false);
     }
@@ -264,35 +324,8 @@ const SessionView: React.FC<SessionViewProps> = ({
       </header>
 
       <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 px-6 relative z-10">
-        <aside className="lg:col-span-3 space-y-6 order-2 lg:order-1">
-          <div className="glass-card-2026 p-5">
-            <div className="flex justify-between items-center pb-3 border-b border-black/5 mb-3">
-              <span className="label-caps mb-0 text-black/40 text-[9px]">Neural Map</span>
-              <button onClick={() => setGraphModalOpen(true)} className="p-1.5 hover:bg-black/5 rounded-lg"><Maximize2 className="w-3 h-3 opacity-40" /></button>
-            </div>
-            <div className="h-48 rounded-2xl overflow-hidden bg-black/[0.01]">
-              <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center text-[9px] font-black uppercase opacity-20">Loading Map...</div>}>
-                <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} sessionId={session.id} onAgentResponse={setActiveAgentResponse} />
-              </React.Suspense>
-            </div>
-          </div>
-          <div className="glass-card-2026 p-5 flex flex-col items-center">
-            <span className="label-caps mb-3 text-black/40 text-[9px]">Neural Injector</span>
-            <div className="p-3 bg-white/40 backdrop-blur-md rounded-2xl border border-white shadow-xl mb-3">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/api/upload-bridge?sessionId=${session.id}`)}`}
-                alt="QR Bridge"
-                className="w-28 h-28 opacity-80"
-              />
-            </div>
-            <p className="text-[8px] font-black uppercase tracking-widest text-black/30 text-center leading-tight">
-              Scan to inject physical <br /> slides into stream
-            </p>
-          </div>
-        </aside>
-
-        <main className="lg:col-span-6 space-y-6 order-1 lg:order-2">
-          <section className="vidyos-card-spatial relative flex flex-col h-[600px] overflow-hidden">
+        <main className="lg:col-span-8 space-y-6 order-1">
+          <section className="vidyos-card-spatial relative flex flex-col h-[650px] overflow-hidden">
             {analyser && <AudioVisualizer analyser={analyser} />}
             <TranscriptStream transcription={transcription} transcriptEndRef={transcriptEndRef} />
             <SessionControls
@@ -306,6 +339,8 @@ const SessionView: React.FC<SessionViewProps> = ({
               onStart={startRecording}
               onStop={stopRecording}
               onExport={() => {/* Export Logic */ }}
+              onRefine={handleRefine}
+              isRefining={isRefining}
               onClear={() => {
                 if (confirm('Clear entire transcript? This cannot be undone.')) {
                   setTranscription([]);
@@ -333,46 +368,75 @@ const SessionView: React.FC<SessionViewProps> = ({
             )}
           </AnimatePresence>
 
-          <div className="space-y-2">
-            <UnifiedInput onSend={handleUnifiedSend} placeholder="Ground a note or upload slide..." isLive={isRecording} />
-            <div className="flex justify-between items-center px-2">
-              <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-black/30 cursor-pointer hover:text-black/60 transition-colors">
-                <span className="w-5 h-5 flex items-center justify-center bg-black/5 rounded-full"><Sparkles className="w-3 h-3" /></span>
-                Upload Context (PDF/Text)
-                <input type="file" onChange={handleFileUpload} className="hidden" accept=".txt,.md,.json,.csv" />
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div className="md:col-span-9 space-y-2">
+              <UnifiedInput onSend={handleUnifiedSend} placeholder="Ground a note or ask a doubt..." isLive={isRecording} />
+              <div className="flex justify-between items-center px-2">
+                <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-black/30 cursor-pointer hover:text-black/60 transition-colors">
+                  <span className="w-5 h-5 flex items-center justify-center bg-black/5 rounded-full"><Sparkles className="w-3 h-3" /></span>
+                  Upload Context (PDF/Text)
+                  <input type="file" onChange={handleFileUpload} className="hidden" accept=".txt,.md,.json,.csv" />
+                </label>
+              </div>
+            </div>
+            <div className="md:col-span-3 glass-card-2026 p-3 flex items-center gap-4 h-[72px]">
+              <div className="bg-white p-1 rounded-lg">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`${window.location.origin}/api/upload-bridge?sessionId=${session.id}`)}`}
+                  alt="QR Bridge"
+                  className="w-10 h-10 opacity-80"
+                />
+              </div>
+              <div>
+                <p className="text-[7px] font-black uppercase tracking-widest text-black/40 leading-tight">
+                  Neural<br />Injector
+                </p>
+              </div>
             </div>
           </div>
         </main>
 
-        <aside className="lg:col-span-3 space-y-6 order-3">
+        <aside className="lg:col-span-4 space-y-6 order-2">
           <QAConsole
             suggestedQuestions={suggestedQuestions}
             messages={consoleMessages}
             onMessagesChange={setConsoleMessages}
+            onExpand={() => setConsoleModalOpen(true)}
             onAskAI={async (query) => {
               const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Doubt Resolution');
               if (!charged) return "Insufficient credits.";
-
               try {
-                // Use MasterMind instead of raw Perplexity for context-aware routing
                 const res = await masterIntelligence.askMasterMind(query, session.id);
-
-                // If it's a rich response (image, research, etc.), trigger the DynamicCard
                 if (res.type && res.type !== 'text') {
                   setActiveAgentResponse(res);
-                  return res.response || "I've generated a rich visualization for you.";
                 }
-
-                return res.response;
+                return { text: res.response || "I've processed your request.", agent: res.agent };
               } catch (e) {
                 console.error("MasterMind Error:", e);
-                // Fallback to Perplexity for reliability
                 const context = transcription.slice(-10).map(t => t.text).join(' ');
-                return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+                const fallbackRes = await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+                return { text: fallbackRes, agent: 'ResearchAgent' };
               }
             }}
           />
+
+          <AgentControlCenter
+            sessionId={session.id}
+            onExecuteCommand={async (query) => {
+              // We add the message manually so user sees the "Summon" intent
+              setConsoleMessages(prev => [...prev, { role: 'user', text: `Summoning Agent specialized in: ${query}` }]);
+              try {
+                const res = await masterIntelligence.askMasterMind(query, session.id);
+                if (res.type && res.type !== 'text') {
+                  setActiveAgentResponse(res);
+                }
+                setConsoleMessages(prev => [...prev, { role: 'ai', text: res.response || "Agent synchronized.", agent: res.agent }]);
+              } catch (e) {
+                console.error("Agent Summon Error:", e);
+              }
+            }}
+          />
+
           {insight && (
             <div className="glass-card-2026 p-6 bg-gradient-to-br from-purple-600/10 to-transparent border-purple-500/20">
               <Sparkles className="w-4 h-4 text-purple-600 opacity-20 mb-3" />
@@ -391,6 +455,37 @@ const SessionView: React.FC<SessionViewProps> = ({
         </aside>
       </div>
 
+      <div className="max-w-[1500px] mx-auto px-6 mt-12 mb-24">
+        <div className="glass-card-2026 p-1 overflow-hidden relative">
+          <div className="px-8 py-6 border-b border-black/[0.03] flex justify-between items-center">
+            <div>
+              <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-black/40 flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[var(--vidyos-teal)]" />
+                Neural Knowledge Graph
+              </h3>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigateTo('relay_map')}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 rounded-xl transition-all border border-purple-500/20"
+              >
+                <Network className="w-3.5 h-3.5" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Relay Map (3D)</span>
+              </button>
+              <button onClick={() => setGraphModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-black/5 hover:bg-black/10 rounded-xl transition-all">
+                <Maximize2 className="w-3 h-3 opacity-40" />
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Expand Map</span>
+              </button>
+            </div>
+          </div>
+          <div className="h-[600px] w-full bg-black/[0.01]">
+            <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center text-[9px] font-black uppercase opacity-20">Loading Map...</div>}>
+              <KnowledgeGraph concepts={concepts} isSyncing={isSyncing} sessionId={session.id} onAgentResponse={setActiveAgentResponse} />
+            </React.Suspense>
+          </div>
+        </div>
+      </div>
+
       <ExpandableModal isOpen={transcriptModalOpen} onClose={() => setTranscriptModalOpen(false)} title="Transcription History">
         <div className="p-10 space-y-8 max-h-[80vh] overflow-y-auto">
           {transcription.map((turn, i) => (
@@ -399,6 +494,31 @@ const SessionView: React.FC<SessionViewProps> = ({
               <p className="text-md font-bold leading-relaxed">{turn.text}</p>
             </div>
           ))}
+        </div>
+      </ExpandableModal>
+
+      <ExpandableModal isOpen={consoleModalOpen} onClose={() => setConsoleModalOpen(false)} title="Doubt Resolution Console">
+        <div className="h-[80vh] w-full">
+          <QAConsole
+            suggestedQuestions={suggestedQuestions}
+            messages={consoleMessages}
+            onMessagesChange={setConsoleMessages}
+            onAskAI={async (query) => {
+              const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION, 'Doubt Resolution');
+              if (!charged) return "Insufficient credits.";
+              try {
+                const res = await masterIntelligence.askMasterMind(query, session.id);
+                if (res.type && res.type !== 'text') {
+                  setActiveAgentResponse(res);
+                  return res.response || "I've generated a rich visualization for you.";
+                }
+                return res.response;
+              } catch (e) {
+                const context = transcription.slice(-10).map(t => t.text).join(' ');
+                return await callPerplexity(`Context: ${context}\n\nQuestion: ${query}`);
+              }
+            }}
+          />
         </div>
       </ExpandableModal>
 

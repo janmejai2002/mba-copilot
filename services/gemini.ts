@@ -76,3 +76,24 @@ export const extractConceptsFromTranscript = async (transcript: string) => {
 
   return JSON.parse(response.text || '[]');
 };
+
+export const refineTranscript = async (turns: any[]) => {
+  const fullText = turns.map(t => `${t.role}: ${t.text}`).join('\n');
+  const response = await callGeminiProxy(
+    GEMINI_MODELS.FLASH_2_0,
+    `Refine this lecture transcript. Fix typos, remove filler words like "um", "uh", "you know", and format it into clear speaker turns. Maintain the original context and technical MBA terminology. Keep it professional.
+    
+    Raw Transcript:
+    ${fullText.substring(0, 8000)}
+
+    Output JSON array of turns:
+    [
+      { "role": "user" | "model", "text": "...", "timestamp": number }
+    ]`,
+    {
+      responseMimeType: "application/json"
+    }
+  );
+
+  return JSON.parse(response.text || '[]');
+};

@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 
-type View = 'dashboard' | 'subject_home' | 'session' | 'nexus' | 'practice' | 'privacy' | 'terms' | 'refund_policy' | 'pricing';
+type View = 'dashboard' | 'subject_home' | 'session' | 'nexus' | 'practice' | 'privacy' | 'terms' | 'refund_policy' | 'pricing' | 'relay_map';
 
 interface UIState {
     view: View;

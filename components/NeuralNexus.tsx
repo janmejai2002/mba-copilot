@@ -8,10 +8,12 @@ import {
 } from 'lucide-react';
 import { useKnowledgeStore, SemanticNode } from '../stores/useKnowledgeStore';
 import { getMasteryLevel, calculateDecay } from '../services/spaced-repetition';
+import { masterIntelligence } from '../services/intelligence';
 
 interface NeuralNexusProps {
     sessionId?: string;
     onNodeClick?: (node: SemanticNode) => void;
+    onAgentResponse?: (res: any) => void;
 }
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -30,7 +32,7 @@ const CATEGORY_COLORS: Record<string, string> = {
     definition: '#3b82f6'
 };
 
-const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick }) => {
+const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick, onAgentResponse }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<{
         scene: THREE.Scene;
@@ -492,20 +494,40 @@ const NeuralNexus: React.FC<NeuralNexusProps> = ({ sessionId, onNodeClick }) => 
                             </span>
                         </div>
                     )}
+
+                    <div className="mt-6 pt-6 border-t border-white/10 flex gap-3">
+                        <button
+                            onClick={async () => {
+                                if (!sessionId || !selectedNode) return;
+                                try {
+                                    const res = await masterIntelligence.askMasterMind(`Elaborate on "${selectedNode.label}" and its structural role in the knowledge graph.`, sessionId, selectedNode.label);
+                                    if (onAgentResponse) onAgentResponse(res);
+                                } catch (e) {
+                                    console.error("MasterMind Nexus Error:", e);
+                                }
+                            }}
+                            className="flex-1 py-3 bg-[var(--vidyos-teal)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.05] active:scale-[0.95] transition-all shadow-lg shadow-[var(--vidyos-teal)]/20"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Ask MasterMind
+                        </button>
+                    </div>
                 </div>
             )}
 
             {/* Empty state */}
-            {nodeArray.length === 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
-                    <Brain className="w-16 h-16 text-white/10 mb-4" />
-                    <h3 className="text-xl font-black text-white/30 mb-2">No Knowledge Nodes Yet</h3>
-                    <p className="text-sm text-white/20 max-w-md">
-                        Start a learning session to populate your neural knowledge graph. Concepts will appear here with semantic connections and spaced repetition tracking.
-                    </p>
-                </div>
-            )}
-        </div>
+            {
+                nodeArray.length === 0 && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
+                        <Brain className="w-16 h-16 text-white/10 mb-4" />
+                        <h3 className="text-xl font-black text-white/30 mb-2">No Knowledge Nodes Yet</h3>
+                        <p className="text-sm text-white/20 max-w-md">
+                            Start a learning session to populate your neural knowledge graph. Concepts will appear here with semantic connections and spaced repetition tracking.
+                        </p>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 

@@ -15,18 +15,93 @@ interface SubjectHomeProps {
     onOpenSession: (id: string, mode?: 'view' | 'live') => void;
     onStartNewSession: () => void;
     onCreateScheduledSessions: (dates: Date[]) => void;
+    updateSubject: (id: string, updates: Partial<Subject>) => Promise<void>;
+    consumeCredits: (amount: number, operation: string) => Promise<boolean>;
 }
 
-const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, onOpenSession, onStartNewSession, onCreateScheduledSessions }) => {
+const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, onOpenSession, onStartNewSession, onCreateScheduledSessions, updateSubject, consumeCredits }) => {
     const [view, setView] = useState<'dashboard' | 'graph'>('dashboard');
     const [showScheduler, setShowScheduler] = useState(false);
     const [showVault, setShowVault] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState<{ text: string; agent?: string } | null>(null);
+
     const sortedSessions = [...sessions].sort((a, b) => b.date - a.date);
     const pendingNotes = sessions.flatMap(s => (s.notes || []).filter(n => n.status === 'pending'));
 
     // Stats
     const totalHours = sessions.reduce((acc, s) => acc + (s.transcript ? s.transcript.length / 150 / 60 : 0), 0);
     const topicCount = sessions.reduce((acc, s) => acc + (s.concepts?.length || 0), 0);
+
+    const handleRegenerateAnalysis = async () => {
+        const { masterIntelligence } = await import('../services/intelligence');
+        const { useNotificationStore } = await import('../stores/useNotificationStore');
+        const { CREDIT_COSTS } = await import('../constants/pricing');
+        const { addNotification } = useNotificationStore.getState();
+
+        setIsGenerating(true);
+        addNotification('Master AI is synthesizing subject architecture...', 'info');
+
+        try {
+            const charged = await consumeCredits(CREDIT_COSTS.CROSS_SESSION_ANALYSIS || 5, 'Subject Core Synthesis');
+            if (!charged) return;
+
+            // Gather all materials for context
+            const allTurns = sessions.flatMap(s => s.turns || []);
+            const allNotes = sessions.flatMap(s => s.notes || []);
+
+            const result = await masterIntelligence.synthesizeMasterDoc(
+                allTurns,
+                allNotes,
+                [], // No global chats yet
+                subject.name
+            );
+
+            await updateSubject(subject.id, {
+                masterDoc: result,
+                masterDocUpdated: Date.now()
+            });
+            addNotification('Subject analysis updated', 'success');
+        } catch (error) {
+            console.error("Master synthesis failed:", error);
+            addNotification('Synthesis failed', 'error');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleNeuralSearch = async () => {
+        if (!searchQuery.trim() || isSearching) return;
+        const { masterIntelligence } = await import('../services/intelligence');
+        const { useNotificationStore } = await import('../stores/useNotificationStore');
+        const { CREDIT_COSTS } = await import('../constants/pricing');
+        const { addNotification } = useNotificationStore.getState();
+
+        setIsSearching(true);
+        setSearchResult(null);
+
+        try {
+            const charged = await consumeCredits(CREDIT_COSTS.DOUBT_RESOLUTION || 1, 'Neural Search');
+            if (!charged) return;
+
+            // Using askMasterMind with activeSessionId as target if available, or first session
+            const targetSessionId = sessions[0]?.id;
+            if (!targetSessionId) {
+                addNotification('No sessions available for search', 'warning');
+                return;
+            }
+
+            const res = await masterIntelligence.askMasterMind(searchQuery, targetSessionId, `Searching across entire subject: ${subject.name}`);
+            setSearchResult({ text: res.response, agent: res.agent });
+        } catch (error) {
+            console.error("Neural search failed:", error);
+            addNotification('Search failed', 'error');
+        } finally {
+            setIsSearching(false);
+        }
+    };
 
     if (view === 'graph') {
         return (
@@ -147,8 +222,12 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
                                 <span className="label-caps mb-2 text-white/60">Master Cognitive Store</span>
                                 <h2 className="text-3xl font-black tracking-tight">Evolving Subject Analysis</h2>
                             </div>
-                            <button className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                                Regenerate Analysis
+                            <button
+                                onClick={handleRegenerateAnalysis}
+                                disabled={isGenerating || sessions.length === 0}
+                                className={`px-6 py-3 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isGenerating ? 'bg-white/20 animate-pulse' : 'bg-white/10 hover:bg-white/20 backdrop-blur-xl'}`}
+                            >
+                                {isGenerating ? 'Synthesizing...' : 'Regenerate Analysis'}
                             </button>
                         </div>
                         <div className="p-10 prose prose-teal max-w-none">
@@ -188,13 +267,39 @@ const SubjectHome: React.FC<SubjectHomeProps> = ({ subject, sessions, onBack, on
                             <div className="bg-white/10 backdrop-blur-3xl p-2 rounded-3xl border border-white/10 flex items-center gap-4 focus-within:bg-white/15 transition-all">
                                 <input
                                     type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleNeuralSearch()}
                                     placeholder={`"Extract all references to Game Theory across Term 1..."`}
                                     className="flex-1 bg-transparent border-none outline-none text-md text-white px-8 py-5 placeholder:text-white/20 font-bold"
                                 />
-                                <button className="w-14 h-14 bg-[var(--vidyos-teal)] text-white rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-lg shadow-[var(--vidyos-teal)]/30">
-                                    <ChevronRight className="w-6 h-6" />
+                                <button
+                                    onClick={handleNeuralSearch}
+                                    disabled={isSearching || !searchQuery.trim()}
+                                    className={`w-14 h-14 bg-[var(--vidyos-teal)] text-white rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-lg shadow-[var(--vidyos-teal)]/30 ${isSearching ? 'animate-pulse' : ''}`}
+                                >
+                                    {isSearching ? <Sparkles className="w-6 h-6 animate-spin" /> : <ChevronRight className="w-6 h-6" />}
                                 </button>
                             </div>
+
+                            {searchResult && (
+                                <div className="mt-8 bg-white/5 border border-white/10 rounded-3xl p-8 animate-in slide-in-from-top-4">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <Sparkles className="w-4 h-4 text-[var(--vidyos-teal)]" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                                                {searchResult.agent || 'Neural'} Insight
+                                            </span>
+                                        </div>
+                                        <button onClick={() => setSearchResult(null)} className="p-1 hover:bg-white/10 rounded-lg">
+                                            <X className="w-4 h-4 text-white/40" />
+                                        </button>
+                                    </div>
+                                    <div className="text-sm font-medium leading-relaxed text-white/80 whitespace-pre-wrap">
+                                        {searchResult.text}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

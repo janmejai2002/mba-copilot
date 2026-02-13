@@ -3,7 +3,8 @@ import { storage } from '../services/db';
 import { Session } from '../types';
 import NeuralNexus from '../components/NeuralNexus';
 import NexusAIController from '../components/NexusAIController';
-import { ArrowLeft, Share2, Download, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Layers, ShieldCheck, Sparkles, Layout } from 'lucide-react';
+import { masterIntelligence } from '../services/intelligence';
 
 interface NexusViewProps {
     session: Session;
@@ -12,14 +13,21 @@ interface NexusViewProps {
 
 const NexusView: React.FC<NexusViewProps> = ({ session, onBack }) => {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [aiResponse, setAiResponse] = useState<{ text: string; agent?: string } | null>(null);
 
     const handleCommand = async (command: string) => {
         setIsProcessing(true);
-        // Mock processing time for AI Command
-        setTimeout(() => {
-            console.log("Nexus AI executing:", command);
+        setAiResponse(null);
+        try {
+            const res = await masterIntelligence.askMasterMind(command, session.id);
+            setAiResponse({ text: res.response, agent: res.agent });
+            console.log("Nexus AI Response:", res);
+        } catch (e) {
+            console.error("Nexus AI failed:", e);
+            setAiResponse({ text: "I encountered a synchronization error in the neural core.", agent: "MasterMind" });
+        } finally {
             setIsProcessing(false);
-        }, 1500);
+        }
     };
 
     return (
@@ -69,8 +77,37 @@ const NexusView: React.FC<NexusViewProps> = ({ session, onBack }) => {
 
             {/* Main 3D Canvas */}
             <div className="w-full h-full">
-                <NeuralNexus sessionId={session.id} />
+                <NeuralNexus
+                    sessionId={session.id}
+                    onAgentResponse={(res) => setAiResponse({ text: res.response, agent: res.agent })}
+                />
             </div>
+
+            {/* AI Response Overlay */}
+            {aiResponse && (
+                <div className="absolute top-32 right-8 w-80 bg-white/5 backdrop-blur-3xl border border-white/10 p-6 rounded-3xl animate-apple-in z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="w-4 h-4 text-[var(--vidyos-teal)]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                                {aiResponse.agent || 'Commander'} Analysis
+                            </span>
+                        </div>
+                        {aiResponse.agent && (
+                            <div className="px-2 py-0.5 bg-white/10 rounded text-[7px] font-black uppercase tracking-tighter text-white/40 border border-white/5">
+                                {aiResponse.agent}
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap font-medium">{aiResponse.text}</p>
+                    <button
+                        onClick={() => setAiResponse(null)}
+                        className="mt-6 text-[9px] font-black uppercase tracking-widest text-[var(--vidyos-teal)] hover:text-white transition-colors"
+                    >
+                        Dismiss Analysis
+                    </button>
+                </div>
+            )}
 
             {/* AI Commander */}
             <NexusAIController onCommand={handleCommand} isProcessing={isProcessing} />

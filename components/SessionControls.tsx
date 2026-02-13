@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Play, Pause, Volume2, FileText, SkipForward, X } from 'lucide-react';
+import { Play, Pause, Volume2, FileText, SkipForward, X, Sparkles } from 'lucide-react';
 
 interface SessionControlsProps {
     isRecording: boolean;
@@ -13,7 +13,9 @@ interface SessionControlsProps {
     onStart: () => void;
     onStop: () => void;
     onExport: () => void;
+    onRefine?: () => void;
     onClear: () => void;
+    isRefining?: boolean;
 }
 
 const SessionControls: React.FC<SessionControlsProps> = ({
@@ -27,7 +29,9 @@ const SessionControls: React.FC<SessionControlsProps> = ({
     onStart,
     onStop,
     onExport,
-    onClear
+    onRefine,
+    onClear,
+    isRefining = false
 }) => {
     return (
         <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] md:w-auto">
@@ -42,14 +46,17 @@ const SessionControls: React.FC<SessionControlsProps> = ({
                     <SkipForward className="w-3 h-3 md:w-4 md:h-4 mx-auto" />
                 </button>
 
-                {/* Export Button */}
+                {/* Refine Button */}
                 <button
-                    onClick={onExport}
-                    aria-label="Export clean transcript"
-                    className="hidden md:flex px-3 py-2 bg-black/5 hover:bg-black/10 rounded-full items-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-[var(--vidyos-teal)]"
+                    onClick={onRefine}
+                    disabled={isRefining}
+                    aria-label="Refine transcript with AI"
+                    className={`hidden md:flex px-4 py-2 rounded-full items-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-purple-500 ${isRefining ? 'bg-purple-500 text-white animate-pulse' : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-600'}`}
                 >
-                    <FileText className="w-3 h-3 text-black/60" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-black/60 whitespace-nowrap">Clean</span>
+                    <Sparkles className={`w-3.5 h-3.5 ${isRefining ? 'animate-spin' : ''}`} />
+                    <span className="text-[8px] font-black uppercase tracking-widest whitespace-nowrap">
+                        {isRefining ? 'Refining...' : 'AI Refine'}
+                    </span>
                 </button>
 
                 {/* Trash/Clear Button */}
@@ -109,4 +116,3 @@ const SessionControls: React.FC<SessionControlsProps> = ({
 };
 
 export default SessionControls;
-

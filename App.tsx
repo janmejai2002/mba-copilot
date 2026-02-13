@@ -31,7 +31,7 @@ import { useCreditStore } from './stores/useCreditStore';
 const App: React.FC = () => {
   const { user, showAuth, showOnboarding, isSovereign, setUser, setShowAuth, setShowOnboarding, setIsSovereign, logout } = useAuthStore();
   const { view, isLoading, darkMode, showPricing, setView, setIsLoading, setDarkMode, setShowPricing, navigateTo } = useUIStore();
-  const { subjects, activeSubjectId, loadSubjects, addSubject, deleteSubject, clearAllSubjects, setActiveSubjectId } = useSubjectStore();
+  const { subjects, activeSubjectId, loadSubjects, addSubject, updateSubject, deleteSubject, clearAllSubjects, setActiveSubjectId } = useSubjectStore();
   const { sessions, activeSessionId, isMiniMode, loadSessions, addSession, updateSession, deleteSession, setActiveSessionId, setIsMiniMode } = useSessionStore();
   const { credits, loadCredits, consumeCredits } = useCreditStore();
 
@@ -41,7 +41,7 @@ const App: React.FC = () => {
     const handleHashChange = () => setHash(window.location.hash);
     const handleLocationChange = () => {
       const path = window.location.pathname.replace('/', '') || 'dashboard';
-      if (['dashboard', 'subject_home', 'session', 'nexus', 'practice', 'privacy', 'terms', 'refund_policy', 'pricing'].includes(path)) {
+      if (['dashboard', 'subject_home', 'session', 'nexus', 'practice', 'privacy', 'terms', 'refund_policy', 'pricing', 'relay_map'].includes(path)) {
         if (path === 'pricing') {
           setView('dashboard');
           setShowPricing(true);
@@ -300,6 +300,8 @@ const App: React.FC = () => {
           }}
           onStartNewSession={() => setShowNewSessionModal(true)}
           onCreateScheduledSessions={(dates) => handleCreateScheduledSessions(activeSubjectId, dates)}
+          updateSubject={updateSubject}
+          consumeCredits={consumeCredits}
         />
       )}
 
@@ -392,7 +394,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {view === 'nexus' && activeSessionId && (
+      {view === 'relay_map' && activeSessionId && (
         <NexusView
           session={sessions.find(s => s.id === activeSessionId)!}
           onBack={() => navigateTo('session')}

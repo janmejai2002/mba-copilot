@@ -18,6 +18,7 @@ export interface SemanticNode {
     timestamp: number;
     examProbability?: number;
     position3D?: [number, number, number]; // UMAP projected coordinates
+    sessionId?: string; // Links concepts to a specific lecture
 }
 
 interface KnowledgeStore {
@@ -26,7 +27,7 @@ interface KnowledgeStore {
     lastSync: number;
 
     // Node management
-    addNode: (label: string, explanation: string, category: SemanticNode['category']) => Promise<string>;
+    addNode: (label: string, explanation: string, category: SemanticNode['category'], sessionId?: string) => Promise<string>;
     updateNode: (id: string, updates: Partial<SemanticNode>) => void;
     removeNode: (id: string) => void;
     getNode: (id: string) => SemanticNode | undefined;
@@ -41,7 +42,7 @@ interface KnowledgeStore {
     getNodeMastery: (id: string) => number;
 
     // Bulk operations
-    importConcepts: (concepts: { keyword: string; explanation: string; timestamp: number }[]) => Promise<void>;
+    importConcepts: (concepts: { keyword: string; explanation: string; timestamp: number }[], sessionId?: string) => Promise<void>;
     clearAll: () => void;
 
     // Stats
@@ -61,7 +62,7 @@ export const useKnowledgeStore = create<KnowledgeStore>()(
             isProcessing: false,
             lastSync: 0,
 
-            addNode: async (label, explanation, category) => {
+            addNode: async (label, explanation, category, sessionId) => {
                 const id = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                 set({ isProcessing: true });
@@ -80,7 +81,8 @@ export const useKnowledgeStore = create<KnowledgeStore>()(
                         depth: 0,
                         childIds: [],
                         connections: [],
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        sessionId
                     };
 
                     set(state => {
@@ -189,12 +191,12 @@ export const useKnowledgeStore = create<KnowledgeStore>()(
                 return calculateDecay(node.srs);
             },
 
-            importConcepts: async (concepts) => {
+            importConcepts: async (concepts, sessionId) => {
                 set({ isProcessing: true });
 
                 for (const concept of concepts) {
                     const category = categorizeConcept(concept.keyword, concept.explanation);
-                    await get().addNode(concept.keyword, concept.explanation, category);
+                    await get().addNode(concept.keyword, concept.explanation, category, sessionId);
                 }
 
                 // Build connections after import

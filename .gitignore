@@ -36,3 +36,9 @@ backend/.env
 .vercel/
 .gcloudignore
 testing_suite/
+
+# Debug & Test artifacts
+backend/debug_*.py
+backend/test_results.txt
+backend/test_all_agents.py
+run_tests.py
