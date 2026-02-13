@@ -11,7 +11,7 @@ interface TranscriptStreamProps {
 
 const TranscriptStream: React.FC<TranscriptStreamProps> = ({ transcription, transcriptEndRef }) => {
     return (
-        <div className="flex-1 overflow-y-auto space-y-6 md:space-y-12 py-16 md:py-32 px-4 md:px-12 custom-scrollbar relative z-10 scroll-smooth">
+        <div className="flex-1 overflow-y-auto space-y-6 md:space-y-12 py-12 px-4 md:px-12 custom-scrollbar relative z-10 scroll-smooth">
             {transcription.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                     <Sparkles className="w-20 h-20 mb-6" strokeWidth={1} />

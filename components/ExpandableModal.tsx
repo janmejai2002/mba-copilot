@@ -38,7 +38,7 @@ const ExpandableModal: React.FC<ExpandableModalProps> = ({ isOpen, onClose, titl
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-apple-in">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-apple-in">
             {/* Backdrop with blur */}
             <div
                 className="absolute inset-0 bg-black/20 backdrop-blur-md"

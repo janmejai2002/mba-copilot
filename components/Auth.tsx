@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { Lock, Loader2, ArrowRight } from 'lucide-react';
-import { GoogleUser } from '../services/googleDrive';
+import { GoogleUser } from '../types';
 
 interface AuthProps {
     onAuthComplete: (user: GoogleUser) => void;
@@ -27,7 +27,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
                     name: userData.name,
                     picture: userData.picture,
                     accessToken: tokenResponse.access_token,
-                    expiresAt: Date.now() + 3600 * 1000 // 1 hour expiration
+                    expiresAt: Date.now() + 30 * 24 * 3600 * 1000 // 30 day local session
                 };
 
                 onAuthComplete(googleUser);

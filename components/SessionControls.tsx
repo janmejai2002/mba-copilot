@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Play, Pause, Volume2, FileText, SkipForward } from 'lucide-react';
+import { Play, Pause, Volume2, FileText, SkipForward, X } from 'lucide-react';
 
 interface SessionControlsProps {
     isRecording: boolean;
@@ -13,6 +13,7 @@ interface SessionControlsProps {
     onStart: () => void;
     onStop: () => void;
     onExport: () => void;
+    onClear: () => void;
 }
 
 const SessionControls: React.FC<SessionControlsProps> = ({
@@ -25,7 +26,8 @@ const SessionControls: React.FC<SessionControlsProps> = ({
     setVolumeBoost,
     onStart,
     onStop,
-    onExport
+    onExport,
+    onClear
 }) => {
     return (
         <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] md:w-auto">
@@ -48,6 +50,15 @@ const SessionControls: React.FC<SessionControlsProps> = ({
                 >
                     <FileText className="w-3 h-3 text-black/60" />
                     <span className="text-[8px] font-black uppercase tracking-widest text-black/60 whitespace-nowrap">Clean</span>
+                </button>
+
+                {/* Trash/Clear Button */}
+                <button
+                    onClick={onClear}
+                    title="Clear entire transcript"
+                    className="p-2 hover:bg-red-500/10 rounded-full group transition-all"
+                >
+                    <X className="w-4 h-4 text-black/20 group-hover:text-red-500" />
                 </button>
 
                 {/* Main Record/Stop Button + Pause */}

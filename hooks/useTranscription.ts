@@ -74,39 +74,43 @@ export function useTranscription(onTranscriptReceived: (text: string) => void) {
             const socket = new WebSocket(url, ['token', token]);
             socketRef.current = socket;
 
-            socket.onopen = () => {
+            socket.onopen = async () => {
                 setIsRecording(true);
-                setBackgroundState('recording'); // Activate recording visuals
+                setBackgroundState('recording');
                 const source = audioContext.createMediaStreamSource(stream);
                 const analyserNode = audioContext.createAnalyser();
                 analyserNode.fftSize = 256;
                 source.connect(analyserNode);
                 setAnalyser(analyserNode);
 
-                const processor = audioContext.createScriptProcessor(4096, 1, 1);
-                source.connect(processor);
-                processor.connect(audioContext.destination);
+                try {
+                    await audioContext.audioWorklet.addModule('/worklets/audio-processor.js');
+                    const workletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+                    source.connect(workletNode);
+                    workletNode.connect(audioContext.destination);
 
-                processor.onaudioprocess = (e) => {
-                    if (socket.readyState !== WebSocket.OPEN || isPausedRef.current) return;
+                    workletNode.port.onmessage = (event) => {
+                        if (socket.readyState !== WebSocket.OPEN || isPausedRef.current) return;
 
-                    const inputData = e.inputBuffer.getChannelData(0);
+                        const inputData = event.data;
 
-                    if (skipSilenceRef.current) {
-                        let sum = 0;
-                        for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
-                        if (Math.sqrt(sum / inputData.length) < 0.01) return;
-                    }
+                        if (skipSilenceRef.current) {
+                            let sum = 0;
+                            for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
+                            if (Math.sqrt(sum / inputData.length) < 0.01) return;
+                        }
 
-                    const pcmData = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        const boosted = inputData[i] * volumeBoostRef.current;
-                        pcmData[i] = Math.max(-1, Math.min(1, boosted)) * 0x7FFF;
-                    }
-                    socket.send(pcmData.buffer);
-                };
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            const boosted = inputData[i] * volumeBoostRef.current;
+                            pcmData[i] = Math.max(-1, Math.min(1, boosted)) * 0x7FFF;
+                        }
+                        socket.send(pcmData.buffer);
+                    };
+                } catch (err) {
+                    console.error("AudioWorklet failed, transcription might fail:", err);
+                }
             };
-
             socket.onmessage = (message) => {
                 const data = JSON.parse(message.data);
                 if (data.channel?.alternatives?.[0]?.transcript && data.is_final) {

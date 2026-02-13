@@ -111,7 +111,7 @@ const SessionView: React.FC<SessionViewProps> = ({
   }, []);
 
   const syncKnowledgeGraph = async () => {
-    if (transcription.length < 5 && consoleMessages.length === 0) return;
+    if (isSyncing || (transcription.length < 5 && consoleMessages.length === 0)) return;
     setIsSyncing(true);
     setBackgroundState('syncing'); // Activate syncing visuals
     addNotification('Synchronizing Neural Map...', 'info');
@@ -306,12 +306,18 @@ const SessionView: React.FC<SessionViewProps> = ({
               onStart={startRecording}
               onStop={stopRecording}
               onExport={() => {/* Export Logic */ }}
+              onClear={() => {
+                if (confirm('Clear entire transcript? This cannot be undone.')) {
+                  setTranscription([]);
+                  addNotification('Transcript cleared', 'info');
+                }
+              }}
             />
           </section>
 
           <AnimatePresence>
             {activeAgentResponse && (
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[100] scale-110">
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[3000] scale-110">
                 <button
                   onClick={() => setActiveAgentResponse(null)}
                   className="absolute -top-2 -right-2 w-6 h-6 bg-black text-white rounded-full flex items-center justify-center z-[110] shadow-xl"
@@ -404,7 +410,6 @@ const SessionView: React.FC<SessionViewProps> = ({
         </div>
       </ExpandableModal>
     </div>
-
   );
 };
 
